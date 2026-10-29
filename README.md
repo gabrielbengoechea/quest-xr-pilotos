@@ -7,6 +7,9 @@ No requieren instalación: se abren desde el navegador del visor.
 |---|---|---|
 | Atlas Portuario XR | `atlas.html` | Globo en realidad mixta con 30 puertos (5 por región), 8 pasos estratégicos, 12 corredores y vistas 360° de Wikimedia Commons |
 | Motor turbofán | `motor-jet/index.html` | Vista explosionada de un motor de reacción en 5 niveles, colocada sobre la mesa |
+| Centro Logístico 3D | [fork de logi](https://github.com/gabrielbengoechea/logi) | Recorrido a pie en VR por una nave de distribución |
+| Logística 3D | [fork de logistica3d](https://github.com/gabrielbengoechea/logistica3d) | Recorrido a pie en VR por la terminal de Montevideo |
+| Estiba | [fork de Estiba-VR](https://github.com/gabrielbengoechea/Estiba-VR) | Exploración libre en VR de una terminal de contenedores |
 
 ## Cómo usarlas en el Quest
 

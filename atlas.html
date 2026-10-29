@@ -852,11 +852,11 @@ async function fetchImagery(node) {
   ]);
   const ratio = (i) => i.width / i.height;
   const isEquirect = (i) => Math.abs(ratio(i) - 2) < 0.05 && i.width >= 3000;
-  // Mapillary sube series de cientos de fotos casi iguales: solo diurnas (8 a 18 h) y una por serie y hora
+  // Mapillary sube series de cientos de fotos casi iguales: solo diurnas (8 a 18 h) y una por serie cada 10 minutos
   const seen = new Set();
   const street = toItems(streetJson).filter(isEquirect).filter((i) => {
     const hour = Number(i.title.match(/ (\d\d)H\d\dM/)?.[1] ?? 12);
-    const key = i.title.replace(/\d\dM\d\dS\d*/, '');
+    const key = i.title.replace(/(H\d)\dM\d\dS\d*/, '$1');
     if (hour < 8 || hour > 18 || seen.has(key)) return false;
     seen.add(key);
     return true;

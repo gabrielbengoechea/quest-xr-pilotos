@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motor Jet XR – Vista explosionada</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0f17; color: #e6edf6;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #hud { position: fixed; left: 16px; top: 16px; max-width: 400px; box-sizing: border-box;
+    background: rgba(11, 15, 23, .86); border: 1px solid rgba(34, 211, 238, .35);
+    border-radius: 12px; padding: 14px 16px; font-size: 14px; line-height: 1.45; }
+  #hud h1 { font-size: 17px; margin: 0 0 6px; }
+  #hud p { margin: 4px 0; color: #b6c4d4; }
+  #xrButton { margin-top: 10px; width: 100%; padding: 12px 14px; font-size: 15px; font-weight: 600;
+    border: 0; border-radius: 10px; background: #22d3ee; color: #04121a; cursor: pointer; }
+  #xrButton[disabled] { background: #2c3646; color: #8c9aac; cursor: default; }
+  #status { margin-top: 8px; font-size: 13px; color: #9fb3c8; }
+  kbd { background: #1d2635; border: 1px solid #33415a; border-radius: 4px; padding: 0 5px; font-size: 12px; }
+  @media (max-width: 480px) { #hud { left: 8px; right: 8px; top: 8px; max-width: none; } }
+</style>
+<!--
+  three.js r186 vía CDN (ESM + import map). Los addons se resuelven con el prefijo "three/addons/".
+-->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="hud">
+  <h1>Motor turbofán · Vista explosionada XR</h1>
+  <p id="hudHelp">Vista previa de escritorio: <kbd>click</kbd> pieza · arrastrar para orbitar ·
+    <kbd>↑</kbd><kbd>↓</kbd> despiece · <kbd>←</kbd><kbd>→</kbd> rotar · <kbd>espacio</kbd> armar/desarmar</p>
+  <button id="xrButton" disabled>Comprobando WebXR…</button>
+  <div id="status"></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   CONFIGURACIÓN
+   Todo en metros: la maqueta mide ~62 cm armada, pensada para una mesa.
+   ===================================================================== */
+const CONFIG = {
+  targetFrameRate: 72,   // Quest 2 admite 72/90/120 Hz. 72 deja margen de GPU; probar 90 si el perfil lo permite.
+  axisHeight: 0.17,      // altura del eje del motor sobre la mesa
+  sectionGap: 0.13,      // separación axial extra entre niveles con explosión = 1
+  stageGap: 0.02,        // separación extra entre etapas dentro de una sección
+  explodeSpeed: 0.9,     // unidades de explosión por segundo con el stick a fondo
+  rotateSpeed: 1.6,      // rad/s con el stick a fondo
+  deadzone: 0.15,        // zona muerta del thumbstick
+  grabRadius: 0.38,      // distancia (m) del control al centro del motor para agarre cercano
+  debugStats: false,     // true → imprime draw calls y triángulos cada 2 s en la consola
+};
+
+/* =====================================================================
+   RENDERER
+   alpha:true + clearColor con alfa 0 → los píxeles sin geometría quedan
+   transparentes y el navegador compone el passthrough detrás.
+   ===================================================================== */
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000000, 0);
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local-floor'); // y = 0 es el piso real
+renderer.xr.setFoveation(1);                      // foveated rendering fijo: menos píxeles en la periferia
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const DESKTOP_BG = new THREE.Color(0x0b0f17);
+const VR_BG = new THREE.Color(0x10151f);
+scene.background = DESKTOP_BG; // en AR se pone en null para ver el passthrough
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.01, 50);
+camera.position.set(0.2, 0.55, 0.95);
+
+// Iluminación barata: entorno precalculado (una vez) + hemisférica + una direccional, SIN sombras.
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.85;
+pmrem.dispose();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2a3442, 0.8));
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
+keyLight.position.set(0.6, 2.0, 0.8);
+scene.add(keyLight);
+
+/* =====================================================================
+   MATERIALES (pocos y compartidos → menos cambios de estado y programas)
+   ===================================================================== */
+const MAT = {
+  casing: new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.5, roughness: 0.42, side: THREE.DoubleSide }),
+  blade: new THREE.MeshStandardMaterial({ color: 0xaab4c2, metalness: 0.75, roughness: 0.3 }),
+  fan: new THREE.MeshStandardMaterial({ color: 0x7f93ab, metalness: 0.7, roughness: 0.35 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x3b4250, metalness: 0.6, roughness: 0.5 }),
+  hot: new THREE.MeshStandardMaterial({ color: 0x8a5a3c, metalness: 0.7, roughness: 0.45 }),
+  combustion: new THREE.MeshStandardMaterial({ color: 0x3a1a0c, emissive: 0xff5a1f, emissiveIntensity: 1.3,
+    metalness: 0.2, roughness: 0.6 }),
+  highlight: new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 0.5,
+    metalness: 0.2, roughness: 0.4, side: THREE.DoubleSide }),
+};
+
+/* =====================================================================
+   JERARQUÍA
+   anchor      → posición sobre la mesa (se mueve al colocar / agarrar)
+   └ engineRoot → rotación del usuario (thumbstick X) + sombra de contacto
+     └ engine   → eleva el eje a CONFIG.axisHeight
+       └ sección (Group) × 5 → desplazamiento axial por nivel
+         └ piezas (Mesh / InstancedMesh) → desplazamiento propio + giro de rotores
+   Todo lo que está debajo de anchor usa matrixAutoUpdate = false y se
+   recompone con updateMatrix() solo cuando cambia: el recorrido de
+   updateMatrixWorld no recalcula matrices locales de piezas quietas.
+   ===================================================================== */
+const anchor = new THREE.Group();
+anchor.name = 'Maqueta';
+scene.add(anchor);
+
+const engineRoot = new THREE.Group();
+engineRoot.matrixAutoUpdate = false;
+anchor.add(engineRoot);
+
+const engine = new THREE.Group();
+engine.position.y = CONFIG.axisHeight;
+engine.matrixAutoUpdate = false;
+engine.updateMatrix();
+engineRoot.add(engine);
+
+const sections = [];  // grupos por nivel
+const parts = [];     // todas las piezas (para la explosión)
+const pickables = []; // lista explícita para el raycaster (sin recursión)
+const spinners = [];  // rotores que giran
+
+function makeSection(level, title) {
+  const group = new THREE.Group();
+  group.name = title;
+  group.userData = { level, title };
+  group.matrixAutoUpdate = false;
+  group.updateMatrix();
+  engine.add(group);
+  sections.push(group);
+  return group;
+}
+
+/** Agrega una pieza a una sección. explode = desplazamiento propio (m) con explosión = 1. */
+function addPart(section, mesh, z, { name, info, explode = [0, 0, 0], spin = null }) {
+  mesh.name = name;
+  mesh.position.z = z;
+  mesh.userData = {
+    name, info, section: `Nivel ${section.userData.level} · ${section.userData.title}`,
+    base: mesh.position.clone(), explode: new THREE.Vector3(...explode), spin,
+    originalMaterial: mesh.material,
+  };
+  mesh.matrixAutoUpdate = false;
+  mesh.updateMatrix();
+  section.add(mesh);
+  parts.push(mesh);
+  pickables.push(mesh);
+  if (spin) spinners.push(mesh);
+  return mesh;
+}
+
+/* ---------- Geometrías procedurales (eje del motor = Z local, frente en +Z) ---------- */
+
+// Cilindro alineado con Z. radiusFront = cara +Z. cut = abre un sector de 90° arriba (+Y) a modo de corte didáctico.
+function tube(radiusFront, radiusRear, length, { open = true, cut = false, radial = 40 } = {}) {
+  const g = new THREE.CylinderGeometry(radiusFront, radiusRear, length, radial, 1, open,
+    cut ? Math.PI * 1.25 : 0, cut ? Math.PI * 1.5 : Math.PI * 2);
+  g.rotateX(Math.PI / 2); // eje Y → Z; con esta rotación el ángulo 180° queda en +Y, centro del corte
+  return g;
+}
+
+// Anillo de álabes: UNA InstancedMesh = UN draw call por etapa, sin importar cuántos álabes tenga.
+function bladeRing(count, rIn, rOut, chord, thickness, twist, material) {
+  const geometry = new THREE.BoxGeometry(thickness, rOut - rIn, chord);
+  const mesh = new THREE.InstancedMesh(geometry, material, count);
+  const m = new THREE.Matrix4(), rot = new THREE.Matrix4(), lift = new THREE.Matrix4(), pitch = new THREE.Matrix4();
+  lift.makeTranslation(0, (rIn + rOut) / 2, 0);
+  pitch.makeRotationY(twist); // ángulo de ataque del álabe
+  for (let i = 0; i < count; i++) {
+    rot.makeRotationZ((i / count) * Math.PI * 2);
+    m.copy(rot).multiply(lift).multiply(pitch);
+    mesh.setMatrixAt(i, m);
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+  mesh.computeBoundingSphere();
+  return mesh;
+}
+
+function cone(radius, height, pointsForward) {
+  const g = new THREE.ConeGeometry(radius, height, 28);
+  g.rotateX(pointsForward ? Math.PI / 2 : -Math.PI / 2);
+  return g;
+}
+
+/* =====================================================================
+   MODELO: MOTOR TURBOFÁN EN 5 NIVELES
+   ===================================================================== */
+// --- Nivel 1: Fan / Admisión ---
+const fanSec = makeSection(1, 'Fan / Admisión');
+addPart(fanSec, new THREE.Mesh(new THREE.TorusGeometry(0.147, 0.011, 8, 48), MAT.casing), 0.30, {
+  name: 'Labio de admisión', explode: [0, 0, 0.05],
+  info: 'Borde redondeado de la góndola. Guía el aire hacia el fan sin desprendimientos y suele incorporar sistema antihielo.' });
+addPart(fanSec, new THREE.Mesh(tube(0.147, 0.147, 0.10, { cut: true }), MAT.casing), 0.25, {
+  name: 'Carcasa del fan', explode: [0, 0.12, 0],
+  info: 'Envuelve el fan y está reforzada para contener un álabe que se desprenda. El corte superior permite ver el interior.' });
+addPart(fanSec, bladeRing(18, 0.04, 0.138, 0.045, 0.004, 0.55, MAT.fan), 0.245, {
+  name: 'Álabes del fan (18)', spin: 'N1',
+  info: 'Mueven una gran masa de aire. En un turbofán de alto bypass la mayor parte del empuje la genera el aire que rodea el núcleo.' });
+addPart(fanSec, new THREE.Mesh(tube(0.04, 0.04, 0.03, { open: false, radial: 24 }), MAT.dark), 0.235, {
+  name: 'Buje del fan', spin: 'N1',
+  info: 'Disco donde se fijan los álabes del fan. Está unido al eje de baja presión (N1).' });
+addPart(fanSec, new THREE.Mesh(cone(0.036, 0.06, true), MAT.dark), 0.27, {
+  name: 'Cono de entrada (spinner)', spin: 'N1', explode: [0, 0, 0.04],
+  info: 'Carenado del buje del fan. Orienta el flujo hacia la raíz de los álabes y reduce la acumulación de hielo.' });
+
+// --- Nivel 2: Compresor (baja + alta presión) ---
+const compSec = makeSection(2, 'Compresor');
+addPart(compSec, new THREE.Mesh(tube(0.10, 0.076, 0.14, { cut: true }), MAT.casing), 0.12, {
+  name: 'Carcasa del compresor', explode: [0, 0.12, 0],
+  info: 'Conducto que se estrecha hacia atrás: al reducirse el área de paso, el aire se comprime etapa a etapa.' });
+addPart(compSec, new THREE.Mesh(tube(0.046, 0.044, 0.135, { open: false, radial: 24 }), MAT.dark), 0.12, {
+  name: 'Tambor del compresor', spin: 'N2',
+  info: 'Estructura rotante que sostiene los discos de cada etapa del compresor.' });
+for (let k = 0; k < 8; k++) {
+  const low = k < 3;
+  const stage = low ? k + 1 : k - 2;
+  const z = low ? 0.175 - 0.015 * k : 0.125 - 0.015 * (k - 3);
+  const rOut = low ? 0.095 - 0.003 * k : 0.084 - 0.003 * (k - 3);
+  addPart(compSec, bladeRing(low ? 22 : 28, 0.046, rOut, low ? 0.010 : 0.008, 0.003, 0.35, MAT.blade), z, {
+    name: low ? `Compresor de baja presión · etapa ${stage}` : `Compresor de alta presión · etapa ${stage}`,
+    spin: low ? 'N1' : 'N2', explode: [0, 0, (3.5 - k) * CONFIG.stageGap],
+    info: low
+      ? 'Gira con el eje N1, a la misma velocidad que el fan. Cada etapa (rotor + estator) eleva un poco la presión del aire.'
+      : 'Gira más rápido, con el eje N2. La relación de compresión total de un turbofán moderno suele estar entre 30:1 y 50:1.' });
+}
+
+// --- Nivel 3: Cámara de combustión ---
+const combSec = makeSection(3, 'Cámara de combustión');
+addPart(combSec, new THREE.Mesh(tube(0.088, 0.088, 0.075, { cut: true }), MAT.casing), 0.008, {
+  name: 'Carcasa de combustión', explode: [0, 0.11, 0],
+  info: 'Recipiente de presión que rodea la cámara. Soporta la presión más alta de todo el motor.' });
+{
+  const profile = [];
+  for (let j = 0; j <= 20; j++) {
+    const a = (j / 20) * Math.PI * 2;
+    profile.push(new THREE.Vector2(0.063 + 0.013 * Math.cos(a), 0.03 * Math.sin(a)));
+  }
+  const liner = new THREE.LatheGeometry(profile, 36);
+  liner.rotateX(Math.PI / 2);
+  addPart(combSec, new THREE.Mesh(liner, MAT.combustion), 0.008, {
+    name: 'Cámara anular (liner)',
+    info: 'Aquí arde el combustible mezclado con el aire comprimido. Los gases superan los 1.500 °C; parte del aire se usa para refrigerar las paredes.' });
+}
+{
+  const injGeo = new THREE.CylinderGeometry(0.004, 0.004, 0.022, 6);
+  injGeo.rotateX(Math.PI / 2);
+  const injectors = new THREE.InstancedMesh(injGeo, MAT.dark, 12);
+  const m = new THREE.Matrix4();
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    m.makeTranslation(Math.cos(a) * 0.063, Math.sin(a) * 0.063, 0);
+    injectors.setMatrixAt(i, m);
+  }
+  injectors.instanceMatrix.needsUpdate = true;
+  injectors.computeBoundingSphere();
+  addPart(combSec, injectors, 0.043, {
+    name: 'Inyectores de combustible (12)', explode: [0, 0, 0.035],
+    info: 'Pulverizan el combustible en gotas muy finas para que se mezcle con el aire y la llama sea estable.' });
+}
+addPart(combSec, new THREE.Mesh(tube(0.012, 0.012, 0.6, { open: false, radial: 12 }), MAT.dark), -0.02, {
+  name: 'Ejes N1 / N2',
+  info: 'Dos ejes concéntricos: N1 une fan y compresor de baja con la turbina de baja; N2 une compresor de alta con la turbina de alta.' });
+
+// --- Nivel 4: Turbina (alta + baja presión) ---
+const turbSec = makeSection(4, 'Turbina');
+addPart(turbSec, new THREE.Mesh(tube(0.086, 0.10, 0.12, { cut: true }), MAT.casing), -0.092, {
+  name: 'Carcasa de la turbina', explode: [0, 0.12, 0],
+  info: 'Conducto que se ensancha hacia atrás a medida que los gases se expanden y ceden energía a cada etapa.' });
+addPart(turbSec, new THREE.Mesh(tube(0.05, 0.05, 0.11, { open: false, radial: 24 }), MAT.dark), -0.09, {
+  name: 'Discos de turbina', spin: 'N2',
+  info: 'Discos que sostienen los álabes de turbina. Soportan enormes cargas centrífugas y térmicas.' });
+for (let k = 0; k < 6; k++) {
+  const high = k < 2;
+  const stage = high ? k + 1 : k - 1;
+  const z = high ? -0.045 - 0.015 * k : -0.085 - 0.015 * (k - 2);
+  const rOut = high ? 0.078 : 0.082 + 0.004 * (k - 2);
+  addPart(turbSec, bladeRing(high ? 32 : 36, 0.05, rOut, 0.009, 0.003, -0.4, MAT.hot), z, {
+    name: high ? `Turbina de alta presión · etapa ${stage}` : `Turbina de baja presión · etapa ${stage}`,
+    spin: high ? 'N2' : 'N1', explode: [0, 0, (2.5 - k) * CONFIG.stageGap],
+    info: high
+      ? 'Recibe los gases más calientes y extrae energía para mover el compresor de alta (eje N2). Sus álabes tienen canales internos de refrigeración.'
+      : 'Extrae la energía restante de los gases para mover el fan y el compresor de baja (eje N1).' });
+}
+
+// --- Nivel 5: Tobera / Escape ---
+const nozSec = makeSection(5, 'Tobera / Escape');
+addPart(nozSec, new THREE.Mesh(tube(0.10, 0.074, 0.14, { cut: true }), MAT.casing), -0.22, {
+  name: 'Tobera de escape', explode: [0, 0.08, 0],
+  info: 'Acelera los gases calientes hacia atrás. Esa aceleración produce el empuje del núcleo del motor.' });
+addPart(nozSec, new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.006, 6, 40), MAT.dark), -0.29, {
+  name: 'Labio de la tobera', explode: [0, 0.08, -0.03],
+  info: 'Borde de salida de la tobera. Su forma influye en el ruido y en la mezcla con el aire del bypass.' });
+addPart(nozSec, new THREE.Mesh(cone(0.05, 0.16, false), MAT.hot), -0.23, {
+  name: 'Cono de escape', explode: [0, 0, -0.05],
+  info: 'Forma, junto con la tobera, el conducto anular de salida y ordena el flujo de los gases de escape.' });
+
+/* ---------- Sombra de contacto (textura radial, sin shadow maps) ---------- */
+function radialTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grad;
+  g.fillRect(0, 0, 128, 128);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const shadow = new THREE.Mesh(
+  new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ map: radialTexture(), transparent: true, depthWrite: false, toneMapped: false }));
+shadow.position.y = 0.002;
+shadow.renderOrder = -1;
+shadow.matrixAutoUpdate = false;
+engineRoot.add(shadow);
+
+/* =====================================================================
+   PANEL DE INFORMACIÓN (canvas → textura; se redibuja solo al cambiar)
+   ===================================================================== */
+const panelCanvas = document.createElement('canvas');
+panelCanvas.width = 1024;
+panelCanvas.height = 512;
+const pctx = panelCanvas.getContext('2d');
+const panelTex = new THREE.CanvasTexture(panelCanvas);
+panelTex.colorSpace = THREE.SRGBColorSpace;
+const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.18),
+  new THREE.MeshBasicMaterial({ map: panelTex, transparent: true, depthWrite: false, toneMapped: false }));
+panel.renderOrder = 10;
+scene.add(panel);
+
+function wrapLines(text, maxWidth) {
+  const out = [];
+  for (const paragraph of text.split('\n')) {
+    let line = '';
+    for (const word of paragraph.split(' ')) {
+      const test = line ? `${line} ${word}` : word;
+      if (line && pctx.measureText(test).width > maxWidth) { out.push(line); line = word; }
+      else line = test;
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+let panelKey = '';
+function drawPanel(title, subtitle, body, footer) {
+  const key = title + subtitle + body + footer;
+  if (key === panelKey) return; // evita subir la textura si nada cambió
+  panelKey = key;
+  const W = panelCanvas.width, H = panelCanvas.height;
+  pctx.clearRect(0, 0, W, H);
+  pctx.fillStyle = 'rgba(11,16,26,0.9)';
+  pctx.strokeStyle = 'rgba(34,211,238,0.75)';
+  pctx.lineWidth = 6;
+  pctx.beginPath();
+  pctx.roundRect(6, 6, W - 12, H - 12, 36);
+  pctx.fill();
+  pctx.stroke();
+  pctx.fillStyle = '#ffffff';
+  pctx.font = 'bold 54px system-ui, sans-serif';
+  pctx.fillText(title, 44, 86, W - 88);
+  pctx.fillStyle = '#22d3ee';
+  pctx.font = '600 32px system-ui, sans-serif';
+  pctx.fillText(subtitle, 44, 134, W - 88);
+  pctx.fillStyle = '#d5deea';
+  pctx.font = '32px system-ui, sans-serif';
+  wrapLines(body, W - 88).slice(0, 7).forEach((l, i) => pctx.fillText(l, 44, 190 + i * 42));
+  pctx.fillStyle = '#8fa1b6';
+  pctx.font = '28px system-ui, sans-serif';
+  pctx.fillText(footer, 44, H - 36, W - 88);
+  panelTex.needsUpdate = true;
+}
+
+/* =====================================================================
+   COLOCACIÓN: retícula + planos detectados + mesa virtual (modo VR)
+   ===================================================================== */
+const reticle = new THREE.Group();
+{
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x22d3ee, toneMapped: false, side: THREE.DoubleSide });
+  reticle.add(new THREE.Mesh(new THREE.RingGeometry(0.05, 0.065, 40).rotateX(-Math.PI / 2), ringMat));
+  reticle.add(new THREE.Mesh(new THREE.CircleGeometry(0.008, 16).rotateX(-Math.PI / 2), ringMat));
+  reticle.userData.material = ringMat;
+}
+reticle.visible = false;
+scene.add(reticle);
+
+const planeMaterials = {
+  table: new THREE.MeshBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide }),
+  other: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.07, depthWrite: false, side: THREE.DoubleSide }),
+};
+const planeEntries = new Map(); // XRPlane → { mesh, lastChanged }
+let placementTargets = [];      // superficies horizontales donde se puede apuntar
+
+const virtualTable = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.6), MAT.dark);
+virtualTable.position.set(0, 0.72, -0.75);
+virtualTable.userData.label = 'virtual';
+virtualTable.visible = false;
+scene.add(virtualTable);
+const vrGrid = new THREE.GridHelper(6, 24, 0x2b3a50, 0x1a2433);
+vrGrid.visible = false;
+scene.add(vrGrid);
+
+function rebuildPlacementTargets() {
+  placementTargets = [];
+  for (const [plane, entry] of planeEntries) if (plane.orientation === 'horizontal') placementTargets.push(entry.mesh);
+  if (virtualTable.visible) placementTargets.push(virtualTable);
+}
+
+// Lee frame.detectedPlanes (feature "plane-detection"). En Quest los planos vienen de la
+// Configuración del espacio: no se descubren solos en tiempo real.
+function updatePlanes(frame, refSpace) {
+  const planes = frame.detectedPlanes;
+  if (!planes) return;
+  let changed = false;
+  for (const [plane, entry] of planeEntries) {
+    if (!planes.has(plane)) {
+      scene.remove(entry.mesh);
+      entry.mesh.geometry.dispose();
+      planeEntries.delete(plane);
+      changed = true;
+    }
+  }
+  for (const plane of planes) {
+    let entry = planeEntries.get(plane);
+    if (!entry || entry.lastChanged !== plane.lastChangedTime) {
+      const shape = new THREE.Shape(plane.polygon.map((p) => new THREE.Vector2(p.x, -p.z)));
+      const geometry = new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2); // polígono en el plano XZ del planeSpace
+      const label = plane.semanticLabel === 'table' ? 'table' : 'plane';
+      if (!entry) {
+        const mesh = new THREE.Mesh(geometry, label === 'table' ? planeMaterials.table : planeMaterials.other);
+        mesh.matrixAutoUpdate = false;
+        mesh.userData.label = label;
+        scene.add(mesh);
+        entry = { mesh, lastChanged: plane.lastChangedTime };
+        planeEntries.set(plane, entry);
+      } else {
+        entry.mesh.geometry.dispose();
+        entry.mesh.geometry = geometry;
+        entry.lastChanged = plane.lastChangedTime;
+      }
+      if (label === 'table') state.tableFound = true;
+      changed = true;
+    }
+    const pose = frame.getPose(plane.planeSpace, refSpace);
+    entry.mesh.visible = !!pose && state.mode === 'placing';
+    if (pose) {
+      entry.mesh.matrix.fromArray(pose.transform.matrix);
+      entry.mesh.updateMatrixWorld(true);
+    }
+  }
+  if (changed) rebuildPlacementTargets();
+}
+
+function clearPlanes() {
+  for (const [, entry] of planeEntries) { scene.remove(entry.mesh); entry.mesh.geometry.dispose(); }
+  planeEntries.clear();
+  state.tableFound = false;
+  rebuildPlacementTargets();
+}
+
+/* =====================================================================
+   ESTADO
+   ===================================================================== */
+const state = {
+  mode: 'view',             // 'placing' | 'view'
+  xrMode: null,             // 'immersive-ar' | 'immersive-vr' | null
+  explosion: 0,             // explosionFactor aplicado (suavizado)
+  explosionTarget: 0,       // explosionFactor objetivo (lo mueve el stick)
+  lastApplied: -1,
+  spin: true,
+  selected: null,
+  grabbedBy: null,
+  activeController: null,
+  reticleSource: 'floating',
+  tableFound: false,
+  quarter: 0,
+  lastPct: -1,
+};
+
+/* =====================================================================
+   EXPLOSIÓN: interpolación lineal entre posición armada y desplazada
+   pos = base + offset · explosionFactor  (equivale a lerp(base, base+offset, f))
+   ===================================================================== */
+function applyExplosion(f) {
+  for (const s of sections) {
+    s.position.z = (3 - s.userData.level) * CONFIG.sectionGap * f; // nivel 3 queda fijo; 1-2 adelante, 4-5 atrás
+    s.updateMatrix();
+  }
+  for (const p of parts) {
+    p.position.copy(p.userData.base).addScaledVector(p.userData.explode, f);
+    p.updateMatrix();
+  }
+  shadow.scale.set(0.36, 1, 0.75 + f * 0.8);
+  shadow.updateMatrix();
+}
+applyExplosion(0);
+engineRoot.updateMatrix();
+
+/* =====================================================================
+   CONTROLES OCULUS TOUCH
+   getController(i)     → espacio del rayo (targetRaySpace): selección y raycast
+   getControllerGrip(i) → espacio de agarre (gripSpace): modelo 3D del mando
+   ===================================================================== */
+const controllerModelFactory = new XRControllerModelFactory();
+const rayGeometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+const rayMaterial = new THREE.LineBasicMaterial({ color: 0x22d3ee, transparent: true, opacity: 0.8 });
+const controllers = [];
+const raycaster = new THREE.Raycaster();
+const tmpMat = new THREE.Matrix4();
+const tmpV = new THREE.Vector3();
+const tmpV2 = new THREE.Vector3();
+
+function pulse(inputSource, intensity, durationMs) {
+  const actuator = inputSource?.gamepad?.hapticActuators?.[0];
+  try { actuator?.pulse?.(intensity, durationMs)?.catch?.(() => {}); } catch { /* sin háptica */ }
+}
+
+function setRayFromController(controller) {
+  controller.updateMatrixWorld();
+  tmpMat.identity().extractRotation(controller.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tmpMat);
+  raycaster.far = 10;
+}
+
+function pickPart(controller) {
+  setRayFromController(controller);
+  return raycaster.intersectObjects(pickables, false)[0] ?? null;
+}
+
+for (let i = 0; i < 2; i++) {
+  const controller = renderer.xr.getController(i);
+  controller.userData = { inputSource: null, prevButtons: [], hitTestSource: null };
+  const ray = new THREE.Line(rayGeometry, rayMaterial);
+  ray.scale.z = 1.5;
+  ray.visible = false;
+  controller.add(ray);
+  controller.userData.ray = ray;
+
+  controller.addEventListener('connected', (event) => {
+    const source = event.data;
+    controller.userData.inputSource = source;
+    ray.visible = source.targetRayMode === 'tracked-pointer';
+    if (source.handedness === 'right' || !state.activeController) state.activeController = controller;
+    // hit-test desde el rayo del mando (respaldo si no hay planos de la Configuración del espacio)
+    const session = renderer.xr.getSession();
+    if (state.xrMode === 'immersive-ar' && session?.requestHitTestSource) {
+      session.requestHitTestSource({ space: source.targetRaySpace })
+        .then((hts) => { controller.userData.hitTestSource = hts; })
+        .catch(() => {});
+    }
+  });
+  controller.addEventListener('disconnected', () => {
+    if (state.grabbedBy === controller) releaseModel();
+    controller.userData.hitTestSource?.cancel();
+    controller.userData.hitTestSource = null;
+    controller.userData.inputSource = null;
+    ray.visible = false;
+    if (state.activeController === controller) state.activeController = null;
+  });
+
+  // GATILLO → colocar (modo colocación) o seleccionar pieza (modo vista)
+  controller.addEventListener('selectstart', () => {
+    state.activeController = controller;
+    const source = controller.userData.inputSource;
+    if (state.mode === 'placing') {
+      placeModel();
+      pulse(source, 0.6, 60);
+      return;
+    }
+    const hit = pickPart(controller);
+    if (hit) { selectPart(hit.object); pulse(source, 0.5, 40); }
+    else deselect();
+  });
+
+  // GRIP → agarrar la maqueta completa (6DoF) con el rayo o con el mando cerca
+  controller.addEventListener('squeezestart', () => {
+    if (state.mode !== 'view' || state.grabbedBy) return;
+    const hit = pickPart(controller);
+    engine.getWorldPosition(tmpV);
+    const near = raycaster.ray.origin.distanceTo(tmpV) < CONFIG.grabRadius;
+    if (hit || near) {
+      controller.attach(anchor); // attach conserva la transformación de mundo
+      state.grabbedBy = controller;
+      pulse(controller.userData.inputSource, 0.35, 30);
+    }
+  });
+  controller.addEventListener('squeezeend', () => {
+    if (state.grabbedBy === controller) {
+      releaseModel();
+      pulse(controller.userData.inputSource, 0.15, 20);
+    }
+  });
+
+  scene.add(controller);
+  const grip = renderer.xr.getControllerGrip(i);
+  grip.add(controllerModelFactory.createControllerModel(grip));
+  scene.add(grip);
+  controllers.push(controller);
+}
+
+function releaseModel() {
+  scene.attach(anchor);
+  state.grabbedBy = null;
+}
+
+function selectPart(mesh) {
+  if (state.selected === mesh) return;
+  deselect();
+  state.selected = mesh;
+  mesh.material = MAT.highlight;
+  refreshPanel();
+}
+function deselect() {
+  if (!state.selected) return;
+  state.selected.material = state.selected.userData.originalMaterial;
+  state.selected = null;
+  refreshPanel();
+}
+
+function enterPlacing() {
+  if (state.grabbedBy) releaseModel();
+  deselect();
+  state.mode = 'placing';
+  anchor.visible = false;
+  refreshPanel();
+}
+
+function placeModel() {
+  anchor.position.copy(reticle.position);
+  // Orientar el eje del motor perpendicular a la mirada para ver el despiece de costado
+  const viewer = renderer.xr.isPresenting ? renderer.xr.getCamera() : camera;
+  viewer.getWorldPosition(tmpV);
+  const dx = anchor.position.x - tmpV.x, dz = anchor.position.z - tmpV.z;
+  anchor.quaternion.identity();
+  anchor.rotation.set(0, Math.atan2(dx, dz) + Math.PI / 2, 0);
+  engineRoot.rotation.set(0, 0, 0);
+  engineRoot.updateMatrix();
+  anchor.visible = true;
+  reticle.visible = false;
+  state.mode = 'view';
+  for (const [, entry] of planeEntries) entry.mesh.visible = false;
+  refreshPanel();
+}
+
+function updateReticle(frame, refSpace) {
+  const controller = state.activeController ?? controllers.find((c) => c.userData.inputSource);
+  if (!controller?.userData.inputSource) { reticle.visible = false; return; }
+  setRayFromController(controller);
+  let source = null;
+  // 1) Planos de la Configuración del espacio (mesa, piso…) o mesa virtual en VR
+  const hit = raycaster.intersectObjects(placementTargets, false)[0];
+  if (hit) {
+    reticle.position.copy(hit.point);
+    if (hit.object === virtualTable) reticle.position.y = virtualTable.position.y + 0.02;
+    source = hit.object.userData.label;
+  } else if (frame && controller.userData.hitTestSource) {
+    // 2) Hit-test del navegador
+    const result = frame.getHitTestResults(controller.userData.hitTestSource)[0];
+    const pose = result?.getPose(refSpace);
+    if (pose) {
+      const p = pose.transform.position;
+      reticle.position.set(p.x, p.y, p.z);
+      source = 'hit-test';
+    }
+  }
+  if (!source) {
+    // 3) Sin superficie: flotando a 60 cm delante del mando
+    reticle.position.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, 0.6);
+    source = 'floating';
+  }
+  reticle.userData.material.color.set(source === 'floating' ? 0xfbbf24 : 0x22d3ee);
+  reticle.visible = true;
+  controller.userData.ray.scale.z = raycaster.ray.origin.distanceTo(reticle.position);
+  if (source !== state.reticleSource) { state.reticleSource = source; refreshPanel(); }
+}
+
+function refreshPanel() {
+  const pct = `Despiece: ${Math.round(state.explosion * 100)} %`;
+  if (state.mode === 'placing') {
+    const footer = {
+      table: 'Mesa detectada en tu Configuración del espacio',
+      plane: 'Superficie detectada',
+      'hit-test': 'Superficie encontrada por hit-test',
+      virtual: 'Mesa virtual (modo VR sin passthrough)',
+      floating: 'Sin superficie: el motor quedará flotando',
+    }[state.reticleSource];
+    drawPanel('Colocar maqueta', 'Paso 1: elegí dónde ubicar el motor',
+      'Apuntá a la mesa con el control y presioná el GATILLO para colocar el motor.\n' +
+      'Si no aparece la mesa, configurala en Ajustes › Entorno físico › Configuración del espacio.', footer);
+  } else if (state.selected) {
+    const d = state.selected.userData;
+    drawPanel(d.name, d.section, d.info, pct);
+  } else if (renderer.xr.isPresenting) {
+    drawPanel('Motor turbofán', 'Vista explosionada interactiva',
+      'GATILLO: ver una pieza   ·   GRIP: tomar y mover\nSTICK ↑↓: despiece   ·   STICK ←→: rotar\n' +
+      'Click del stick: armar / desarmar   ·   A/X: giro de rotores\nB/Y: volver a colocar en la mesa', pct);
+  } else {
+    drawPanel('Motor turbofán', 'Vista previa de escritorio',
+      'Click: ver una pieza   ·   Arrastrar: orbitar\nFlechas ↑↓: despiece   ·   ←→: rotar\nEspacio: armar / desarmar', pct);
+  }
+}
+
+/* ---------- Thumbstick y botones (gamepad xr-standard del Quest) ----------
+   buttons[0] gatillo · [1] grip · [3] click stick · [4] A/X · [5] B/Y · axes[2], axes[3] stick */
+function handleGamepads(dt) {
+  for (const controller of controllers) {
+    const source = controller.userData.inputSource;
+    const gp = source?.gamepad;
+    if (!gp) continue;
+    const prev = controller.userData.prevButtons;
+    const pressed = (i) => !!gp.buttons[i]?.pressed;
+    const justPressed = (i) => pressed(i) && !prev[i];
+    if (state.mode === 'view') {
+      const x = gp.axes[2] ?? 0, y = gp.axes[3] ?? 0;
+      if (Math.abs(y) > CONFIG.deadzone) {
+        // arriba = eje negativo → aumenta la explosión
+        state.explosionTarget = THREE.MathUtils.clamp(state.explosionTarget - y * CONFIG.explodeSpeed * dt, 0, 1);
+        state.activeController = controller;
+      }
+      if (Math.abs(x) > CONFIG.deadzone) {
+        engineRoot.rotation.y += x * CONFIG.rotateSpeed * dt;
+        engineRoot.updateMatrix();
+      }
+      if (justPressed(3)) state.explosionTarget = state.explosionTarget > 0.5 ? 0 : 1;
+      if (justPressed(4)) { state.spin = !state.spin; pulse(source, 0.2, 20); }
+    }
+    if (justPressed(5)) enterPlacing();
+    for (let i = 0; i < gp.buttons.length; i++) prev[i] = pressed(i);
+  }
+}
+
+// Acorta cada rayo hasta la pieza apuntada (feedback visual sin costo de material)
+function updateRays() {
+  if (state.mode !== 'view') return;
+  for (const controller of controllers) {
+    const ray = controller.userData.ray;
+    if (!ray.visible) continue;
+    const hit = pickPart(controller);
+    ray.scale.z = hit ? hit.distance : 1.5;
+  }
+}
+
+/* =====================================================================
+   VISTA PREVIA DE ESCRITORIO (sin visor)
+   ===================================================================== */
+const orbit = new OrbitControls(camera, renderer.domElement);
+orbit.target.set(0, CONFIG.axisHeight, 0);
+orbit.enableDamping = true;
+orbit.update();
+anchor.rotation.y = Math.PI / 2; // eje del motor a lo ancho de la pantalla
+
+const keys = new Set();
+window.addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (e.code === 'Space') { state.explosionTarget = state.explosionTarget > 0.5 ? 0 : 1; e.preventDefault(); }
+});
+window.addEventListener('keyup', (e) => keys.delete(e.code));
+
+const pointerDown = new THREE.Vector2();
+const pointerNdc = new THREE.Vector2();
+renderer.domElement.addEventListener('pointerdown', (e) => pointerDown.set(e.clientX, e.clientY));
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (renderer.xr.isPresenting || pointerDown.distanceTo(tmpV2.set(e.clientX, e.clientY, 0)) > 5) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointerNdc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(pointerNdc, camera);
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  if (hit) selectPart(hit.object); else deselect();
+});
+
+function handleKeys(dt) {
+  if (keys.has('ArrowUp')) state.explosionTarget = Math.min(1, state.explosionTarget + CONFIG.explodeSpeed * dt);
+  if (keys.has('ArrowDown')) state.explosionTarget = Math.max(0, state.explosionTarget - CONFIG.explodeSpeed * dt);
+  const turn = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
+  if (turn) { engineRoot.rotation.y += turn * CONFIG.rotateSpeed * dt; engineRoot.updateMatrix(); }
+}
+
+window.addEventListener('resize', () => {
+  if (renderer.xr.isPresenting) return;
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* =====================================================================
+   SESIÓN WEBXR: comprobación de soporte y fallback
+   immersive-ar (passthrough) → immersive-vr (sin passthrough) → escritorio
+   ===================================================================== */
+const xrButton = document.getElementById('xrButton');
+const statusEl = document.getElementById('status');
+
+async function startSession(mode) {
+  const init = mode === 'immersive-ar'
+    ? { requiredFeatures: ['local-floor'], optionalFeatures: ['plane-detection', 'hit-test'] }
+    : { requiredFeatures: ['local-floor'] };
+  try {
+    const session = await navigator.xr.requestSession(mode, init);
+    state.xrMode = mode;
+    await renderer.xr.setSession(session);
+  } catch (err) {
+    state.xrMode = null;
+    statusEl.textContent = `No se pudo iniciar la sesión: ${err.message}`;
+  }
+}
+
+async function setupXR() {
+  if (!('xr' in navigator)) {
+    xrButton.textContent = 'WebXR no disponible';
+    statusEl.textContent = window.isSecureContext
+      ? 'Abrí esta página desde el navegador del Meta Quest.'
+      : 'WebXR requiere HTTPS (o localhost). Serví la página por HTTPS.';
+    return;
+  }
+  const ar = await navigator.xr.isSessionSupported('immersive-ar').catch(() => false);
+  const vr = ar ? false : await navigator.xr.isSessionSupported('immersive-vr').catch(() => false);
+  if (!ar && !vr) {
+    xrButton.textContent = 'Este dispositivo no admite sesiones inmersivas';
+    statusEl.textContent = 'Seguís pudiendo usar la vista previa de escritorio.';
+    return;
+  }
+  const mode = ar ? 'immersive-ar' : 'immersive-vr';
+  xrButton.disabled = false;
+  xrButton.textContent = ar ? 'Entrar en Realidad Mixta (passthrough)' : 'Entrar en VR (sin passthrough)';
+  statusEl.textContent = ar ? 'Passthrough disponible.' : 'Passthrough no disponible: se usará una mesa virtual.';
+  xrButton.addEventListener('click', () => {
+    const session = renderer.xr.getSession();
+    if (session) session.end(); else startSession(mode);
+  });
+}
+
+renderer.xr.addEventListener('sessionstart', () => {
+  const session = renderer.xr.getSession();
+  const ar = state.xrMode === 'immersive-ar';
+  scene.background = ar ? null : VR_BG; // null → píxeles transparentes → passthrough visible
+  virtualTable.visible = !ar;
+  vrGrid.visible = !ar;
+  rebuildPlacementTargets();
+  orbit.enabled = false;
+  xrButton.textContent = 'Salir de la sesión';
+  if (session.supportedFrameRates?.includes(CONFIG.targetFrameRate) && session.updateTargetFrameRate) {
+    session.updateTargetFrameRate(CONFIG.targetFrameRate).catch(() => {});
+  }
+  enterPlacing();
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+  for (const c of controllers) { c.userData.hitTestSource?.cancel(); c.userData.hitTestSource = null; }
+  if (state.grabbedBy) releaseModel();
+  clearPlanes();
+  state.xrMode = null;
+  state.mode = 'view';
+  scene.background = DESKTOP_BG;
+  virtualTable.visible = false;
+  vrGrid.visible = false;
+  reticle.visible = false;
+  anchor.position.set(0, 0, 0);
+  anchor.quaternion.identity();
+  anchor.rotation.y = Math.PI / 2;
+  anchor.visible = true;
+  orbit.enabled = true;
+  xrButton.textContent = state.lastButtonText ?? 'Entrar de nuevo';
+  refreshPanel();
+});
+
+/* =====================================================================
+   BUCLE DE RENDERIZADO
+   renderer.setAnimationLoop(cb):
+   - Sin visor usa requestAnimationFrame del navegador.
+   - Durante una sesión WebXR, three.js pasa el callback a session.requestAnimationFrame:
+     el visor dicta la cadencia (72/90 Hz) y entrega un XRFrame en el 2º argumento.
+   - Antes de llamar al callback, three.js ya actualizó las poses de los mandos;
+     dentro de render() actualiza la cámara estéreo (una vista por ojo).
+   - Regla de oro en el bucle: no crear objetos nuevos (sin basura → sin tirones del GC).
+   ===================================================================== */
+const timer = new THREE.Timer();
+timer.connect(document);
+let statsElapsed = 0;
+
+function animate(timestamp, frame) {
+  timer.update(timestamp);
+  const dt = Math.min(timer.getDelta(), 0.05); // tope: evita saltos al entrar/salir de la sesión
+  const t = timer.getElapsed();
+
+  if (frame) {
+    // Solo hay XRFrame dentro de una sesión inmersiva
+    const refSpace = renderer.xr.getReferenceSpace();
+    updatePlanes(frame, refSpace);
+    if (state.mode === 'placing') updateReticle(frame, refSpace);
+    handleGamepads(dt);
+    updateRays();
+  } else {
+    handleKeys(dt);
+    orbit.update(dt);
+  }
+
+  // explosionFactor suavizado hacia el objetivo (interpolación exponencial independiente del framerate)
+  state.explosion = THREE.MathUtils.damp(state.explosion, state.explosionTarget, 8, dt);
+  if (Math.abs(state.explosion - state.explosionTarget) < 1e-4) state.explosion = state.explosionTarget;
+  if (state.explosion !== state.lastApplied) {
+    applyExplosion(state.explosion);
+    state.lastApplied = state.explosion;
+    const quarter = Math.round(state.explosion * 4); // tic háptico cada 25 %
+    if (quarter !== state.quarter) {
+      state.quarter = quarter;
+      pulse(state.activeController?.userData.inputSource, 0.12, 15);
+    }
+    const pct = Math.round(state.explosion * 20);
+    if (pct !== state.lastPct) { state.lastPct = pct; refreshPanel(); }
+  }
+
+  // Rotores: N2 gira más rápido que N1 (solo actualiza estas matrices)
+  if (state.spin && anchor.visible) {
+    for (const p of spinners) {
+      p.rotation.z += (p.userData.spin === 'N2' ? 4.0 : 2.2) * dt;
+      p.updateMatrix();
+    }
+  }
+
+  // Efectos que solo cambian uniforms (sin recompilar shaders)
+  MAT.combustion.emissiveIntensity = 1.2 + 0.25 * Math.sin(t * 13) * Math.sin(t * 7.3);
+  MAT.highlight.emissiveIntensity = 0.4 + 0.25 * Math.sin(t * 5);
+
+  // Panel: sobre el motor (o sobre la retícula al colocar), siempre mirando al usuario
+  if (state.mode === 'placing') panel.position.copy(reticle.position).y += 0.3;
+  else { engine.getWorldPosition(panel.position); panel.position.y += 0.24; }
+  panel.visible = state.mode === 'view' ? anchor.visible : reticle.visible;
+  (renderer.xr.isPresenting ? renderer.xr.getCamera() : camera).getWorldPosition(tmpV);
+  panel.lookAt(tmpV);
+
+  renderer.render(scene, camera); // en XR, `camera` se sustituye internamente por la cámara estéreo
+
+  if (CONFIG.debugStats && (statsElapsed += dt) > 2) {
+    statsElapsed = 0;
+    console.log(`draw calls ${renderer.info.render.calls} · triángulos ${renderer.info.render.triangles} · ` +
+      `texturas ${renderer.info.memory.textures} · programas ${renderer.info.programs.length}`);
+  }
+}
+
+/* =====================================================================
+   ARRANQUE: compilar shaders antes del primer frame (evita tirones al
+   seleccionar la primera pieza, que cambia al material de resaltado)
+   ===================================================================== */
+async function precompile() {
+  const dummyGeometry = new THREE.BoxGeometry(0.001, 0.001, 0.001);
+  const d1 = new THREE.Mesh(dummyGeometry, MAT.highlight);
+  const d2 = new THREE.InstancedMesh(dummyGeometry, MAT.highlight, 1);
+  scene.add(d1, d2);
+  try { await renderer.compileAsync(scene, camera); } catch { /* compila on demand */ }
+  scene.remove(d1, d2);
+  d2.dispose();
+  dummyGeometry.dispose();
+}
+
+refreshPanel();
+await precompile();
+renderer.setAnimationLoop(animate);
+setupXR().then(() => { state.lastButtonText = xrButton.textContent; });
+</script>
+</body>
+</html>

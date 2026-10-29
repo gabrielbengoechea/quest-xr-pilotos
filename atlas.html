@@ -840,16 +840,28 @@ function toItems(json) {
 async function fetchImagery(node) {
   if (imageryCache.has(node.id)) return imageryCache.get(node.id);
   const [lat, lon] = node.view ?? [node.lat, node.lon];
-  const [panoJson, photoJson] = await Promise.all([
-    // 360° reales: archivos con la plantilla {{Pano360}} a menos de 20 km (muchos son de nivel de calle, como Street View)
-    commons({ action: 'query', generator: 'search', gsrnamespace: '6', gsrlimit: '24',
-      gsrsearch: `hastemplate:Pano360 nearcoord:20km,${lat},${lon}`, ...IMAGEINFO }),
+  const near = `hastemplate:Pano360 nearcoord:20km,${lat},${lon}`;
+  const [authorJson, streetJson, photoJson] = await Promise.all([
+    // 360° reales con la plantilla {{Pano360}} a menos de 20 km: primero panorámicas de autor…
+    commons({ action: 'query', generator: 'search', gsrnamespace: '6', gsrlimit: '10', gsrsearch: `${near} -intitle:Mapillary`, ...IMAGEINFO }),
+    // …y después las de nivel de calle de Mapillary, como Street View
+    commons({ action: 'query', generator: 'search', gsrnamespace: '6', gsrlimit: '50', gsrsearch: `${near} intitle:Mapillary`, ...IMAGEINFO }),
     // Fotos comunes geolocalizadas a menos de 10 km
     commons({ action: 'query', generator: 'geosearch', ggscoord: `${lat}|${lon}`, ggsradius: '10000',
       ggslimit: '50', ggsnamespace: '6', ...IMAGEINFO }),
   ]);
   const ratio = (i) => i.width / i.height;
-  const panos = toItems(panoJson).filter((i) => Math.abs(ratio(i) - 2) < 0.05 && i.width >= 3000).slice(0, 10);
+  const isEquirect = (i) => Math.abs(ratio(i) - 2) < 0.05 && i.width >= 3000;
+  // Mapillary sube series de cientos de fotos casi iguales: solo diurnas (8 a 18 h) y una por serie y hora
+  const seen = new Set();
+  const street = toItems(streetJson).filter(isEquirect).filter((i) => {
+    const hour = Number(i.title.match(/ (\d\d)H\d\dM/)?.[1] ?? 12);
+    const key = i.title.replace(/\d\dM\d\dS\d*/, '');
+    if (hour < 8 || hour > 18 || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  const panos = [...toItems(authorJson).filter(isEquirect).slice(0, 4), ...street].slice(0, 8);
   const photos = toItems(photoJson).filter((i) => ratio(i) >= 1.2 && ratio(i) <= 1.95 && i.width >= 1600)
     .sort((a, b) => b.width - a.width).slice(0, 10)
     .map((i) => ({ ...i, url: i.url.replace(/\/\d+px-/, '/1920px-') }));

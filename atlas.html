@@ -725,6 +725,7 @@ function refreshUI() {
       <div class="src">Fuente: ${n.src}</div>
       <div class="actions"><button class="primary" id="enterBtn" type="button" ${state.loading ? 'disabled' : ''}>${state.loading ? 'Buscando imágenes…' : 'Entrar en 360°'}</button>
       <button class="ghost" id="clearBtn" type="button">Cerrar</button></div>
+      <a class="src" href="${streetViewUrl(n)}" target="_blank" rel="noopener" style="color:var(--accent)">Abrir Street View de Google Maps ↗</a>
       ${state.message ? `<p class="src" role="status">${state.message}</p>` : ''}`;
     document.getElementById('enterBtn').onclick = () => enterNode(n);
     document.getElementById('clearBtn').onclick = () => select(null);
@@ -748,9 +749,11 @@ function refreshUI() {
   } else if (state.mode === 'pano') {
     const p = state.pano;
     const item = p?.items?.[p.i];
-    drawPanel({ eyebrow: p.kind === 'pano' ? 'Vista 360°' : `Foto ${p.i + 1} de ${p.items.length}`, title: p.node.name,
+    const many = p.items.length > 1;
+    drawPanel({ eyebrow: `${p.kind === 'pano' ? 'Vista 360°' : 'Foto'} ${p.i + 1} de ${p.items.length}`, title: p.node.name,
       meta: item ? `${item.artist} · ${item.license} · Wikimedia Commons` : '',
-      body: (p.kind === 'pano' ? 'STICK ←→: girar la vista.' : 'GATILLO o A/X: siguiente foto.') + '\nB/Y o el botón: volver al globo.',
+      body: (p.kind === 'pano' ? 'Mirá alrededor girando la cabeza · STICK ←→: girar la vista.\n' : '') +
+        (many ? `GATILLO o A/X: ${p.kind === 'pano' ? 'siguiente 360°' : 'siguiente foto'}.\n` : '') + 'B/Y o el botón: volver al globo.',
       footer: item ? item.title : '', button: 'Volver al globo' });
   } else if (state.loading) {
     drawPanel({ eyebrow: 'Wikimedia Commons', title: 'Buscando imágenes', meta: selectionTarget()?.name ?? '', body: 'Consultando fotos 360° y fotografías libres cerca del punto…' });
@@ -800,41 +803,66 @@ function refreshUI() {
    IMÁGENES: Wikimedia Commons (fotos 360° y fotografías libres cercanas)
    ===================================================================== */
 const imageryCache = new Map();
+const COMMONS_API = 'https://commons.wikimedia.org/w/api.php?';
 const stripHtml = (s) => String(s ?? '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
-async function fetchImagery(node) {
-  if (imageryCache.has(node.id)) return imageryCache.get(node.id);
-  const [lat, lon] = node.view ?? [node.lat, node.lon];
-  const params = new URLSearchParams({
-    action: 'query', format: 'json', origin: '*', generator: 'geosearch', ggscoord: `${lat}|${lon}`,
-    ggsradius: '10000', ggslimit: '150', ggsnamespace: '6', prop: 'imageinfo|categories',
-    iiprop: 'url|size|mime|extmetadata', iiurlwidth: '4096', iiextmetadatafilter: 'Artist|LicenseShortName', cllimit: 'max',
-  });
-  const res = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, { signal: AbortSignal.timeout(12000) });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Consulta a Commons con reintentos: ante muchas consultas seguidas, Wikimedia a veces responde vacío o con error
+async function commons(params) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(COMMONS_API + new URLSearchParams({ format: 'json', origin: '*', ...params }), { signal: AbortSignal.timeout(12000) });
+      if (res.ok) { const json = await res.json(); if (!json.error) return json; }
+    } catch { /* reintenta */ }
+    await sleep(700 * (attempt + 1));
+  }
+  throw new Error('Commons no respondió');
+}
+
+// imageinfo con miniatura: Commons devuelve miniaturas para 50 archivos por consulta como máximo
+const IMAGEINFO = { prop: 'imageinfo', iiprop: 'url|size|mime|extmetadata', iiurlwidth: '3840', iiextmetadatafilter: 'Artist|LicenseShortName' };
+function toItems(json) {
   const items = [];
-  for (const p of Object.values(json.query?.pages ?? {})) {
+  const pages = Object.values(json.query?.pages ?? {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
+  for (const p of pages) {
     const ii = p.imageinfo?.[0];
     if (!ii || ii.mime !== 'image/jpeg' || !ii.width || !ii.height) continue;
-    const cats = (p.categories ?? []).map((c) => c.title).join(' ');
     const meta = ii.extmetadata ?? {};
     items.push({
       title: p.title.replace(/^File:/, '').replace(/\.[a-z]+$/i, ''),
       width: ii.width, height: ii.height, url: ii.thumburl ?? ii.url, page: ii.descriptionurl,
       artist: stripHtml(meta.Artist?.value) || 'Autor desconocido', license: stripHtml(meta.LicenseShortName?.value) || 'ver licencia',
-      is360: /360|equirect|spheric|photosphere/i.test(`${cats} ${p.title}`),
     });
   }
+  return items;
+}
+
+async function fetchImagery(node) {
+  if (imageryCache.has(node.id)) return imageryCache.get(node.id);
+  const [lat, lon] = node.view ?? [node.lat, node.lon];
+  const [panoJson, photoJson] = await Promise.all([
+    // 360° reales: archivos con la plantilla {{Pano360}} a menos de 20 km (muchos son de nivel de calle, como Street View)
+    commons({ action: 'query', generator: 'search', gsrnamespace: '6', gsrlimit: '24',
+      gsrsearch: `hastemplate:Pano360 nearcoord:20km,${lat},${lon}`, ...IMAGEINFO }),
+    // Fotos comunes geolocalizadas a menos de 10 km
+    commons({ action: 'query', generator: 'geosearch', ggscoord: `${lat}|${lon}`, ggsradius: '10000',
+      ggslimit: '50', ggsnamespace: '6', ...IMAGEINFO }),
+  ]);
   const ratio = (i) => i.width / i.height;
-  const panos = items.filter((i) => ratio(i) > 1.95 && ratio(i) < 2.05 && i.width >= 4000)
-    .sort((a, b) => (Number(b.is360) - Number(a.is360)) || (b.width - a.width));
-  const photos = items.filter((i) => ratio(i) >= 1.2 && ratio(i) <= 1.95 && i.width >= 1600)
-    .sort((a, b) => b.width - a.width).slice(0, 8)
-    .map((i) => ({ ...i, url: i.url.replace('/4096px-', '/2048px-') }));
-  const result = { pano: panos[0] ?? null, photos };
+  const panos = toItems(panoJson).filter((i) => Math.abs(ratio(i) - 2) < 0.05 && i.width >= 3000).slice(0, 10);
+  const photos = toItems(photoJson).filter((i) => ratio(i) >= 1.2 && ratio(i) <= 1.95 && i.width >= 1600)
+    .sort((a, b) => b.width - a.width).slice(0, 10)
+    .map((i) => ({ ...i, url: i.url.replace(/\/\d+px-/, '/1920px-') }));
+  const result = { panos, photos };
   imageryCache.set(node.id, result);
   return result;
 }
+
+// Street View de Google Maps en las coordenadas del nodo (se abre fuera de la app)
+const streetViewUrl = (n) => {
+  const [lat, lon] = n.view ?? [n.lat, n.lon];
+  return `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}`;
+};
 
 const panoCenter = new THREE.Vector3();
 const savedView = { pos: new THREE.Vector3(), target: new THREE.Vector3() };
@@ -851,14 +879,14 @@ async function enterNode(node) {
     refreshUI();
     return;
   }
-  const kind = imagery.pano ? 'pano' : (imagery.photos.length ? 'gallery' : null);
+  const kind = imagery.panos.length ? 'pano' : (imagery.photos.length ? 'gallery' : null);
   if (!kind) {
     state.loading = false;
-    state.message = 'No hay fotos libres en Wikimedia Commons en un radio de 10 km de este punto.';
+    state.message = 'No hay fotos libres en Wikimedia Commons cerca de este punto. Probá con Street View de Google Maps.';
     refreshUI();
     return;
   }
-  const items = kind === 'pano' ? [imagery.pano] : imagery.photos;
+  const items = kind === 'pano' ? imagery.panos : imagery.photos;
   let texture;
   try { texture = await loader.loadAsync(items[0].url); }
   catch {
@@ -938,8 +966,9 @@ function fitPhoto(photo, texture) {
 
 async function nextPhoto() {
   const p = state.pano;
-  if (!p || p.kind !== 'gallery' || p.items.length < 2 || state.loading) return;
+  if (!p || p.items.length < 2 || state.loading) return;
   state.loading = true;
+  syncPanoBar();
   const i = (p.i + 1) % p.items.length;
   try {
     const tex = await loader.loadAsync(p.items[i].url);
@@ -947,9 +976,10 @@ async function nextPhoto() {
     if (state.pano !== p) { tex.dispose(); return; }
     p.texture.dispose();
     p.texture = tex; p.i = i;
-    p.room.userData.photo.material.map = tex;
-    fitPhoto(p.room.userData.photo, tex);
-  } catch { /* se queda en la foto actual */ }
+    if (p.kind === 'pano') p.room.userData.sphere.material.map = tex; // mismo slot: no recompila
+    else { p.room.userData.photo.material.map = tex; fitPhoto(p.room.userData.photo, tex); }
+    pulse(state.activeController?.userData.inputSource, 0.3, 30);
+  } catch { /* se queda en la imagen actual */ }
   finally { state.loading = false; syncPanoBar(); refreshUI(); }
 }
 
@@ -979,9 +1009,12 @@ function syncPanoBar() {
   document.getElementById('console').hidden = !!p && !renderer.xr.isPresenting;
   if (!p) return;
   const item = p.items[p.i];
-  document.getElementById('panoTitle').textContent = `${p.node.name} · ${p.kind === 'pano' ? 'vista 360°' : `foto ${p.i + 1} de ${p.items.length}`}`;
+  document.getElementById('panoTitle').textContent = `${p.node.name} · ${p.kind === 'pano' ? 'vista 360°' : 'foto'} ${p.i + 1} de ${p.items.length}`;
   document.getElementById('panoCredit').innerHTML = `${item.title} — ${item.artist} · ${item.license} · <a href="${item.page}" target="_blank" rel="noopener">Wikimedia Commons</a>`;
-  document.getElementById('panoNext').hidden = p.kind !== 'gallery' || p.items.length < 2;
+  const next = document.getElementById('panoNext');
+  next.hidden = p.items.length < 2;
+  next.disabled = state.loading;
+  next.textContent = state.loading ? 'Cargando…' : (p.kind === 'pano' ? 'Siguiente 360°' : 'Siguiente foto');
 }
 document.getElementById('panoBack').addEventListener('click', exitPano);
 document.getElementById('panoNext').addEventListener('click', nextPhoto);
@@ -1202,7 +1235,7 @@ renderer.domElement.addEventListener('pointermove', (e) => {
 });
 renderer.domElement.addEventListener('pointerup', (e) => {
   if (renderer.xr.isPresenting || downAt.distanceTo(tmpV2.set(e.clientX, e.clientY)) > 6) return;
-  if (state.mode === 'pano') { nextPhoto(); return; }
+  if (state.mode === 'pano') { if (state.pano?.kind === 'gallery') nextPhoto(); return; }
   pointerRay(e);
   const hit = pickWithRay();
   if (hit && hit.kind !== 'button') select(hit.kind, hit.index); else select(null);

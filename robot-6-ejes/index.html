@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robot de 6 ejes · UTEC ITR Norte</title>
+<meta name="description" content="Brazo robótico industrial de 6 ejes en 3D, VR y realidad mixta para Meta Quest, Android e iPhone.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #0e1726; --ink-2: #4a5a6e; --tint: #0a84ff; --tint-ink: #fff;
+    --glass: rgba(255, 255, 255, .42); --glass-2: rgba(255, 255, 255, .18);
+    --edge: rgba(255, 255, 255, .75); --edge-2: rgba(255, 255, 255, .15);
+    --shadow: 0 18px 50px rgba(20, 40, 70, .18), 0 2px 8px rgba(20, 40, 70, .08);
+    --track: rgba(14, 23, 38, .12); --bg1: #e9eef5; --bg2: #cfd9e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f1f5fa; --ink-2: #a9b6c6; --tint: #3d9bff;
+      --glass: rgba(40, 48, 62, .46); --glass-2: rgba(40, 48, 62, .22);
+      --edge: rgba(255, 255, 255, .28); --edge-2: rgba(255, 255, 255, .06);
+      --shadow: 0 18px 50px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .3);
+      --track: rgba(255, 255, 255, .16); --bg1: #18202b; --bg2: #0b1018;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(120% 90% at 30% 10%, var(--bg1), var(--bg2));
+    color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---------- Liquid Glass ---------- */
+  .glass {
+    position: relative;
+    background: linear-gradient(160deg, var(--glass), var(--glass-2));
+    -webkit-backdrop-filter: blur(26px) saturate(185%);
+    backdrop-filter: blur(26px) saturate(185%);
+    border-radius: 26px;
+    box-shadow: var(--shadow), inset 0 1px 0 var(--edge), inset 0 -1px 0 var(--edge-2), inset 0 0 0 1px var(--edge-2);
+  }
+  /* brillo especular en el borde superior, como un vidrio curvo */
+  .glass::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0) 38%);
+    mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000); mask-composite: exclude;
+    -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000); -webkit-mask-composite: xor;
+    padding: 1px;
+  }
+
+  header.glass { position: fixed; top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+    padding: 14px 18px 14px 16px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 28px); }
+  header .logo { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(145deg, #3aa0ff, #0a5fd8); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); color: #fff; }
+  header h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  header p { margin: 1px 0 0; font-size: 12.5px; color: var(--ink-2); }
+
+  aside#panel { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top));
+    width: 320px; padding: 16px 16px 12px; max-height: calc(100% - 120px); overflow: auto; scrollbar-width: none; }
+  aside#panel::-webkit-scrollbar { display: none; }
+  .title-row { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 10px; }
+  h2 { margin: 0; font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+  .chip { font-size: 12px; color: var(--ink-2); }
+
+  .joint { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 6px 6px; border-radius: 14px; transition: background .2s; }
+  .joint:hover { background: rgba(255, 255, 255, .14); }
+  .joint label { font-size: 14px; font-weight: 560; }
+  .joint label small { color: var(--ink-2); font-weight: 450; margin-left: 4px; }
+  .joint output { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--ink-2); min-width: 52px; text-align: right; }
+  input[type=range] { grid-column: 1 / -1; width: 100%; height: 26px; margin: 0; background: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--tint) var(--p, 50%), var(--track) var(--p, 50%)); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--tint); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%;
+    background: rgba(255,255,255,.92); box-shadow: 0 2px 8px rgba(0,0,0,.22), inset 0 0 0 .5px rgba(0,0,0,.08); border: 0; }
+  input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.92);
+    box-shadow: 0 2px 8px rgba(0,0,0,.22); border: 0; }
+  input[type=range]:focus-visible { outline: none; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(10,132,255,.35), 0 2px 8px rgba(0,0,0,.22); }
+
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); padding: 3px; gap: 2px; border-radius: 14px; background: var(--track); margin: 12px 0 10px; }
+  .seg button { border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; font-weight: 560; padding: 8px 4px;
+    border-radius: 11px; cursor: pointer; transition: background .2s, box-shadow .2s; }
+  .seg button[aria-pressed=true] { background: rgba(255,255,255,.85); color: #0e1726; box-shadow: 0 2px 6px rgba(0,0,0,.14); }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 8px 6px; font-size: 14px; }
+  .switch { position: relative; width: 51px; height: 31px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 31px; background: var(--track); transition: background .25s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.3,1.4,.6,1); }
+  .switch input:checked + span { background: #34c759; }
+  .switch input:checked + span::after { transform: translateX(20px); }
+  .switch input:focus-visible + span { box-shadow: 0 0 0 4px rgba(10,132,255,.35); }
+
+  nav#dock { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 7px; border-radius: 999px; }
+  nav#dock button, nav#dock a { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 11px 16px;
+    font: inherit; font-size: 14.5px; font-weight: 600; color: var(--ink); background: none; cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background .2s, transform .15s; }
+  nav#dock button:hover, nav#dock a:hover { background: rgba(255,255,255,.22); }
+  nav#dock button:active { transform: scale(.96); }
+  nav#dock .primary { background: var(--tint); color: var(--tint-ink); box-shadow: 0 6px 18px rgba(10,132,255,.35), inset 0 1px 0 rgba(255,255,255,.35); }
+  nav#dock .primary:hover { background: var(--tint); filter: brightness(1.06); }
+  nav#dock button[hidden], nav#dock a[hidden] { display: none; }
+  nav#dock button:disabled { opacity: .45; cursor: default; }
+  svg.i { width: 18px; height: 18px; flex: none; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 74px); transform: translate(-50%, 8px);
+    padding: 10px 16px; border-radius: 16px; font-size: 13.5px; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .5s; }
+  #loading .glass { padding: 14px 20px; font-size: 14px; }
+
+  /* ---------- Manual ---------- */
+  dialog#manual { border: 0; padding: 0; background: none; color: var(--ink); width: min(720px, calc(100% - 24px)); max-height: min(86vh, 900px); }
+  dialog#manual::backdrop { background: rgba(10, 18, 30, .25); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  dialog#manual .glass { padding: 26px 28px 22px; max-height: min(86vh, 900px); overflow: auto; }
+  dialog#manual h2 { font-size: 24px; text-transform: none; letter-spacing: -.01em; color: var(--ink); margin: 0 0 4px; }
+  dialog#manual h3 { font-size: 16px; margin: 22px 0 6px; }
+  dialog#manual p, dialog#manual li { color: var(--ink-2); font-size: 14.5px; }
+  dialog#manual ul, dialog#manual ol { padding-left: 20px; margin: 6px 0; }
+  dialog#manual table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  dialog#manual td, dialog#manual th { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--track); }
+  dialog#manual th { color: var(--ink-2); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  kbd { font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 3px 6px; border-radius: 6px; background: var(--track); color: var(--ink); }
+  dialog#manual .close { position: sticky; top: 0; float: right; border: 0; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    background: var(--track); color: var(--ink); font-size: 18px; line-height: 34px; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--track); padding: 1px 5px; border-radius: 5px; }
+
+  @media (max-width: 760px) {
+    header.glass { right: 14px; }
+    aside#panel { top: auto; right: 10px; left: 10px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 70px); width: auto; max-height: 40vh; padding: 12px; }
+    .joint { padding: 4px 6px; }
+    nav#dock { width: calc(100% - 20px); justify-content: space-between; }
+    nav#dock button, nav#dock a { padding: 10px 11px; font-size: 13px; }
+    nav#dock .lbl-long { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="Vista 3D del brazo robótico"></canvas>
+
+<header class="glass">
+  <div class="logo" aria-hidden="true">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 21h8"/><path d="M9 21v-4"/><circle cx="9" cy="15" r="2"/><path d="M10.5 13.5 15 6"/><circle cx="16" cy="5" r="2"/><path d="m17.5 6.5 3 3"/></svg>
+  </div>
+  <div>
+    <h1>Robot de 6 ejes</h1>
+    <p>UTEC · ITR Norte · Laboratorio XR</p>
+  </div>
+</header>
+
+<aside id="panel" class="glass" aria-label="Controles del robot">
+  <div class="title-row"><h2>Articulaciones</h2><span class="chip" id="tris"></span></div>
+  <div id="joints"></div>
+  <div class="seg" role="group" aria-label="Poses">
+    <button data-pose="erguido" aria-pressed="true">Erguido</button>
+    <button data-pose="inicio" aria-pressed="false">Inicio</button>
+    <button data-pose="tomar" aria-pressed="false">Tomar</button>
+    <button data-pose="dejar" aria-pressed="false">Dejar</button>
+  </div>
+  <div class="row"><span>Demostración: tomar y dejar</span><label class="switch"><input type="checkbox" id="demo" aria-label="Demostración"><span></span></label></div>
+  <div class="row"><span>Mostrar ejes de giro</span><label class="switch"><input type="checkbox" id="axes" aria-label="Mostrar ejes"><span></span></label></div>
+</aside>
+
+<nav id="dock" class="glass" aria-label="Acciones">
+  <button id="btnVR" class="primary" hidden>
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4l-2-3h-2l-2 3H5a2 2 0 0 1-2-2z"/></svg>
+    <span>Entrar en VR</span></button>
+  <button id="btnAR" hidden>
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+    <span>Ver en <span class="lbl-long">tu </span>mesa</span></button>
+  <a id="btnQL" rel="ar" href="modelo/Robot6Ejes.usdz" hidden><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="1" height="1">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+    <span>Ver en AR</span></a>
+  <button id="btnManual">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 7h6"/></svg>
+    <span>Manual</span></button>
+  <button id="btnReset" aria-label="Restablecer vista y pose">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    <span class="lbl-long">Restablecer</span></button>
+</nav>
+
+<div id="toast" class="glass" role="status" aria-live="polite"></div>
+<div id="loading"><div class="glass">Cargando el modelo…</div></div>
+
+<dialog id="manual" aria-labelledby="manTitle">
+  <div class="glass">
+    <button class="close" aria-label="Cerrar el manual" onclick="this.closest('dialog').close()">×</button>
+    <h2 id="manTitle">Manual de uso</h2>
+    <p>Brazo robótico industrial de 6 ejes (tipo cobot) a escala real: base de 18 cm y unos 88 cm de alcance. Sirve para estudiar
+      cinemática, espacio de trabajo y celdas robotizadas en la computadora, en el Meta Quest o sobre una mesa real.</p>
+
+    <h3>En la computadora o el celular</h3>
+    <ul>
+      <li>Arrastrá para girar la vista; rueda o pellizco para acercar; clic derecho o dos dedos para desplazar.</li>
+      <li>Cada control deslizante mueve una articulación. Las poses rápidas llevan el brazo a posiciones típicas.</li>
+      <li><b>Demostración</b> repite un ciclo de tomar y dejar una caja. <b>Mostrar ejes</b> dibuja el eje de giro de cada articulación.</li>
+      <li>Teclado: <kbd>1</kbd>–<kbd>6</kbd> eligen la articulación, <kbd>←</kbd> <kbd>→</kbd> la giran, <kbd>Espacio</kbd> inicia o pausa la demostración.</li>
+    </ul>
+
+    <h3>En el Meta Quest (VR)</h3>
+    <ol>
+      <li>Abrí esta página en el navegador del Quest y tocá <b>Entrar en VR</b>.</li>
+      <li>El robot aparece sobre una mesa virtual, con un panel de vidrio a su izquierda.</li>
+      <li><b>Gatillo</b> sobre el panel: elegir articulación, pose o demostración. <b>Stick derecho ← →</b>: girar la articulación elegida.</li>
+      <li><b>Grip</b> (botón lateral): tomar el robot y moverlo con la mano. Soltá para dejarlo.</li>
+      <li><b>B</b> o <b>Y</b>: volver a ubicar el robot frente a vos.</li>
+    </ol>
+
+    <h3>Sobre tu mesa (realidad mixta)</h3>
+    <ol>
+      <li>En el Quest, marcá la mesa en <i>Configuración › Entorno físico › Configuración del espacio</i> (en Android no hace falta).</li>
+      <li>Tocá <b>Ver en tu mesa</b> y aceptá el permiso del espacio.</li>
+      <li>Apuntá a la mesa: aparece un aro azul. Apretá el <b>gatillo</b> (o tocá la pantalla) para apoyar el robot. La base queda al ras de la mesa y proyecta su sombra.</li>
+      <li>En iPhone o iPad, <b>Ver en AR</b> abre el modelo en Quick Look.</li>
+    </ol>
+
+    <h3>Articulaciones</h3>
+    <table>
+      <thead><tr><th>Eje</th><th>Pieza</th><th>Qué hace</th></tr></thead>
+      <tbody>
+        <tr><td>J1</td><td>Base</td><td>Gira todo el brazo sobre la vertical</td></tr>
+        <tr><td>J2</td><td>Hombro</td><td>Levanta o baja el brazo superior</td></tr>
+        <tr><td>J3</td><td>Codo</td><td>Pliega el antebrazo</td></tr>
+        <tr><td>J4</td><td>Muñeca 1</td><td>Inclina la muñeca</td></tr>
+        <tr><td>J5</td><td>Muñeca 2</td><td>Gira la muñeca de costado</td></tr>
+        <tr><td>J6</td><td>Brida</td><td>Gira la herramienta</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Usar el modelo en otros proyectos</h3>
+    <ul>
+      <li><code>modelo/Robot6Ejes_web.glb</code>: liviano (texturas WebP), para WebXR y three.js.</li>
+      <li><code>modelo/Robot6Ejes.glb</code>: texturas PNG, para Android (Scene Viewer) y cualquier visor glTF.</li>
+      <li><code>modelo/Robot6Ejes_motor.glb</code>: incluye colisiones <code>UCX_*</code> para Unity, Unreal o Godot.</li>
+      <li><code>modelo/Robot6Ejes.usdz</code>: iPhone y iPad (Quick Look). <code>fuente/</code>: archivo de Blender y el script que lo genera.</li>
+      <li>Jerarquía: <code>Base_Mesh › Shoulder_Joint › Upper_Arm › Elbow_Joint › Wrist_1_Joint › Wrist_2_Joint › Wrist_3_Flange</code>.
+        En glTF cada articulación gira sobre su <b>eje Y local</b> (el Z local de Blender). Origen: centro de la base, apoyado en y = 0.</li>
+      <li>Unidades en metros, un solo material con atlas PBR de 2048 px, 8.122 triángulos.</li>
+    </ul>
+    <p style="margin-top:18px;font-size:13px">Modelo ilustrativo inspirado en los cobots industriales; no reproduce ninguna marca comercial.</p>
+  </div>
+</dialog>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
+
+/* =====================================================================
+   Configuración
+   ===================================================================== */
+const MODELO = 'modelo/Robot6Ejes_web.glb';
+const JOINTS = [
+  { node: 'Shoulder_Joint', key: 'J1', name: 'Base', min: -180, max: 180 },
+  { node: 'Upper_Arm', key: 'J2', name: 'Hombro', min: -150, max: 150 },
+  { node: 'Elbow_Joint', key: 'J3', name: 'Codo', min: -160, max: 160 },
+  { node: 'Wrist_1_Joint', key: 'J4', name: 'Muñeca 1', min: -180, max: 180 },
+  { node: 'Wrist_2_Joint', key: 'J5', name: 'Muñeca 2', min: -180, max: 180 },
+  { node: 'Wrist_3_Flange', key: 'J6', name: 'Brida', min: -180, max: 180 },
+];
+// Poses en grados (J1…J6). «Erguido» es la pose en que se modeló el robot.
+const POSES = {
+  erguido: [0, 0, 0, 0, 0, 0],
+  inicio: [0, -5, 110, -10, -90, 0],      // herramienta hacia abajo, 32 cm sobre la mesa
+  tomar: [-40, 25, 125, -60, -90, 0],      // punta a 45 cm de la base, a 7 cm de la mesa
+  dejar: [60, 25, 125, -60, -90, 90],
+};
+const TABLE_H = 0.74;   // altura de la mesa virtual en VR (m)
+
+/* =====================================================================
+   Escena
+   ===================================================================== */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.xr.enabled = true;
+renderer.xr.setReferenceSpaceType('local-floor');
+renderer.xr.setFoveation(1);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.9;
+
+const camera = new THREE.PerspectiveCamera(38, innerWidth / innerHeight, 0.02, 50);
+const orbit = new OrbitControls(camera, canvas);
+const isNarrow = () => innerWidth < 760;
+/** Encuadre: el robot queda centrado en el espacio libre (a la izquierda del panel; en el celular, arriba). */
+function frameView() {
+  const w = innerWidth, h = innerHeight;
+  if (isNarrow()) camera.setViewOffset(w, h, 0, h * 0.2, w, h);
+  else camera.setViewOffset(w, h, 170, 0, w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+function homeView() {
+  const k = isNarrow() ? 1.75 : 1;
+  camera.position.set(1.55 * k, 0.48 + 0.57 * k, 1.9 * k);
+  orbit.target.set(0, 0.48, 0);
+  orbit.update();
+}
+frameView();
+homeView();
+orbit.enableDamping = true;
+orbit.minDistance = 0.4;
+orbit.maxDistance = 6;
+orbit.maxPolarAngle = Math.PI * 0.495;
+
+const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+sun.position.set(1.2, 2.6, 1.4);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -1; sun.shadow.camera.right = 1; sun.shadow.camera.top = 1; sun.shadow.camera.bottom = -1;
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 6;
+sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.01;
+sun.shadow.radius = 6;
+scene.add(sun, sun.target);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 0.5));
+
+// Ancla: todo lo que se mueve junto (robot, sombra, caja de la demo). En VR/AR se ubica sobre la mesa.
+const anchor = new THREE.Group();
+scene.add(anchor);
+const shadowFloor = new THREE.Mesh(new THREE.CircleGeometry(1.4, 64).rotateX(-Math.PI / 2), new THREE.ShadowMaterial({ opacity: 0.22 }));
+shadowFloor.receiveShadow = true;
+anchor.add(shadowFloor);
+
+// Mesa virtual para VR (oculta en escritorio y en realidad mixta)
+const vrRoom = new THREE.Group();
+vrRoom.visible = false;
+{
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.04, 0.8), new THREE.MeshStandardMaterial({ color: 0xd9dee5, roughness: 0.55 }));
+  top.position.y = TABLE_H - 0.02; top.receiveShadow = true;
+  const legM = new THREE.MeshStandardMaterial({ color: 0x5b6573, roughness: 0.4, metalness: 0.6 });
+  for (const [x, z] of [[-0.6, -0.35], [0.6, -0.35], [-0.6, 0.35], [0.6, 0.35]]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, TABLE_H - 0.04, 12), legM);
+    leg.position.set(x, (TABLE_H - 0.04) / 2, z);
+    vrRoom.add(leg);
+  }
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(6, 64).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x2a313c, roughness: 0.9 }));
+  floor.receiveShadow = true;
+  const grid = new THREE.GridHelper(12, 24, 0x4a5566, 0x39424f);
+  grid.position.y = 0.001;
+  vrRoom.add(top, floor, grid);
+  vrRoom.userData.top = top;
+}
+scene.add(vrRoom);
+
+/* =====================================================================
+   Robot
+   ===================================================================== */
+const joints = [];          // { obj, rest: Quaternion, deg }
+const axisHelpers = [];
+let flange = null;
+const AXIS = new THREE.Vector3(0, 1, 0);  // en glTF cada articulación gira sobre su Y local
+const qTmp = new THREE.Quaternion();
+
+function setJoint(i, deg) {
+  const j = joints[i];
+  if (!j) return;
+  const def = JOINTS[i];
+  j.deg = THREE.MathUtils.clamp(deg, def.min, def.max);
+  j.obj.quaternion.copy(j.rest).multiply(qTmp.setFromAxisAngle(AXIS, THREE.MathUtils.degToRad(j.deg)));
+  const ui = sliders[i];
+  if (ui) {
+    ui.input.value = j.deg;
+    ui.out.textContent = `${Math.round(j.deg)}°`;
+    ui.input.style.setProperty('--p', `${((j.deg - def.min) / (def.max - def.min)) * 100}%`);
+  }
+  xrPanel.dirty = true;
+}
+
+new GLTFLoader().load(MODELO, (gltf) => {
+  const robot = gltf.scene;
+  let tris = 0;
+  robot.traverse((o) => {
+    if (o.userData?.shadow_catcher) { o.visible = false; return; }   // usamos nuestra propia sombra
+    if (o.isMesh) {
+      o.castShadow = true;
+      o.receiveShadow = true;
+      tris += o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3;
+    }
+  });
+  anchor.add(robot);
+  for (const def of JOINTS) {
+    const obj = robot.getObjectByName(def.node);
+    joints.push({ obj, rest: obj.quaternion.clone(), deg: 0 });
+    const h = new THREE.ArrowHelper(AXIS, new THREE.Vector3(), 0.16, 0xff9f0a, 0.035, 0.022);
+    h.visible = false;
+    h.traverse((m) => { if (m.material) { m.material.depthTest = false; m.material.transparent = true; } m.renderOrder = 10; });
+    obj.add(h);
+    axisHelpers.push(h);
+  }
+  flange = robot.getObjectByName('Wrist_3_Flange');
+  document.getElementById('tris').textContent = `${Math.round(tris).toLocaleString('es-UY')} triángulos`;
+  applyPose('erguido', 0);
+  document.getElementById('loading').style.opacity = 0;
+}, undefined, (err) => {
+  document.querySelector('#loading .glass').textContent = 'No se pudo cargar el modelo.';
+  console.error(err);
+});
+
+/* =====================================================================
+   Interfaz HTML
+   ===================================================================== */
+const sliders = [];
+const jointsEl = document.getElementById('joints');
+JOINTS.forEach((def, i) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'joint';
+  const id = `j${i}`;
+  wrap.innerHTML = `<label for="${id}">${def.key}<small>${def.name}</small></label><output for="${id}">0°</output>
+    <input id="${id}" type="range" min="${def.min}" max="${def.max}" step="1" value="0">`;
+  const input = wrap.querySelector('input');
+  const out = wrap.querySelector('output');
+  input.addEventListener('input', () => { stopDemo(); markPose(null); setJoint(i, Number(input.value)); });
+  input.addEventListener('focus', () => (selected = i));
+  jointsEl.append(wrap);
+  sliders.push({ input, out });
+});
+
+const toastEl = document.getElementById('toast');
+let toastT = 0;
+function toast(msg, ms = 2600) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('on');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => toastEl.classList.remove('on'), ms);
+}
+
+function markPose(name) {
+  document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.pose === name)));
+  xrPanel.pose = name;
+  xrPanel.dirty = true;
+}
+document.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => { stopDemo(); applyPose(b.dataset.pose); }));
+
+const demoEl = document.getElementById('demo');
+demoEl.addEventListener('change', () => (demoEl.checked ? startDemo() : stopDemo()));
+document.getElementById('axes').addEventListener('change', (e) => setAxes(e.target.checked));
+function setAxes(on) {
+  axisHelpers.forEach((h) => (h.visible = on));
+  document.getElementById('axes').checked = on;
+  xrPanel.axes = on;
+  xrPanel.dirty = true;
+}
+
+const manual = document.getElementById('manual');
+document.getElementById('btnManual').addEventListener('click', () => manual.showModal());
+manual.addEventListener('click', (e) => { if (e.target === manual) manual.close(); });
+document.getElementById('btnReset').addEventListener('click', () => {
+  stopDemo();
+  applyPose('erguido');
+  homeView();
+});
+
+// Teclado
+let selected = 0;
+const held = new Set();
+addEventListener('keydown', (e) => {
+  if (manual.open || e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+  if (/^[1-6]$/.test(e.key)) { selected = Number(e.key) - 1; sliders[selected].input.focus(); toast(`${JOINTS[selected].key} · ${JOINTS[selected].name}`, 1200); }
+  if (e.key === ' ') { e.preventDefault(); demoEl.checked = !demoEl.checked; demoEl.checked ? startDemo() : stopDemo(); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { if (e.target.type !== 'range') { held.add(e.key); e.preventDefault(); } }
+});
+addEventListener('keyup', (e) => held.delete(e.key));
+
+/* =====================================================================
+   Poses y demostración
+   ===================================================================== */
+let tween = null;   // { from, to, t, dur }
+function applyPose(name, dur = 1.1) {
+  const target = POSES[name];
+  if (!target || !joints.length) return;
+  markPose(name);
+  if (dur <= 0) { target.forEach((d, i) => setJoint(i, d)); return; }
+  tween = { from: joints.map((j) => j.deg), to: target, t: 0, dur };
+}
+const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+
+// Caja que el robot toma y deja (ubicada con la cinemática del propio modelo)
+const box = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), new THREE.MeshStandardMaterial({ color: 0xff9f0a, roughness: 0.45 }));
+box.castShadow = true;
+box.visible = false;
+anchor.add(box);
+const TOOL = new THREE.Vector3(0, 0.085, 0);   // punta de la herramienta en el marco de la brida (Y local = eje J6)
+
+function toolPointFor(pose) {
+  const keep = joints.map((j) => j.deg);
+  pose.forEach((d, i) => setJoint(i, d));
+  anchor.updateMatrixWorld(true);
+  const p = flange.localToWorld(TOOL.clone());
+  anchor.worldToLocal(p);
+  keep.forEach((d, i) => setJoint(i, d));
+  return p;
+}
+
+let demo = null;
+function startDemo() {
+  if (!joints.length) return;
+  const pick = toolPointFor(POSES.tomar);
+  box.position.set(pick.x, 0.03, pick.z);
+  box.visible = true;
+  demo = { step: 0, wait: 0, started: false, A: POSES.tomar, B: POSES.dejar };
+  demoEl.checked = true;
+  xrPanel.demo = true; xrPanel.dirty = true;
+  applyPose('inicio', 1.0);
+}
+function stopDemo() {
+  if (!demo) return;
+  demo = null;
+  demoEl.checked = false;
+  if (box.parent !== anchor) anchor.attach(box);
+  xrPanel.demo = false; xrPanel.dirty = true;
+}
+// Secuencia: inicio → A (agarra) → inicio → B (suelta) → inicio, y la próxima vuelta al revés (B → A).
+const STEPS = [
+  { pose: 'A', dur: 1.6, then: 'grab' },
+  { pose: 'inicio', dur: 1.3 },
+  { pose: 'B', dur: 1.8, then: 'release' },
+  { pose: 'inicio', dur: 1.3, then: 'swap' },
+];
+function updateDemo(dt) {
+  if (!demo || tween) return;
+  demo.wait -= dt;
+  if (demo.wait > 0) return;
+  const st = STEPS[demo.step % STEPS.length];
+  if (demo.started) {
+    if (st.then === 'grab') flange.attach(box);
+    if (st.then === 'release') { anchor.attach(box); box.position.y = 0.03; box.rotation.set(0, box.rotation.y, 0); }
+    if (st.then === 'swap') [demo.A, demo.B] = [demo.B, demo.A];
+    demo.step++;
+    demo.started = false;
+    demo.wait = 0.35;
+    return;
+  }
+  const angles = st.pose === 'A' ? demo.A : st.pose === 'B' ? demo.B : POSES[st.pose];
+  tween = { from: joints.map((j) => j.deg), to: angles, t: 0, dur: st.dur };
+  markPose(null);
+  demo.started = true;
+}
+
+/* =====================================================================
+   Panel de vidrio dentro del visor (canvas → textura)
+   ===================================================================== */
+const PW = 1024, PH = 700;
+const xrPanel = {
+  canvas: Object.assign(document.createElement('canvas'), { width: PW, height: PH }),
+  buttons: [], hover: null, dirty: true, pose: 'erguido', demo: false, axes: false, placing: false,
+};
+xrPanel.ctx = xrPanel.canvas.getContext('2d');
+xrPanel.texture = new THREE.CanvasTexture(xrPanel.canvas);
+xrPanel.texture.colorSpace = THREE.SRGBColorSpace;
+xrPanel.texture.anisotropy = 4;
+xrPanel.mesh = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.46 * PH / PW),
+  new THREE.MeshBasicMaterial({ map: xrPanel.texture, transparent: true, depthWrite: false }));
+xrPanel.mesh.visible = false;
+xrPanel.mesh.renderOrder = 20;
+scene.add(xrPanel.mesh);
+
+function rr(g, x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function drawPanel() {
+  const g = xrPanel.ctx;
+  const B = (xrPanel.buttons = []);
+  g.clearRect(0, 0, PW, PH);
+  // vidrio: degradé translúcido, brillo superior y borde fino
+  const grad = g.createLinearGradient(0, 0, 0, PH);
+  grad.addColorStop(0, 'rgba(255,255,255,0.34)');
+  grad.addColorStop(1, 'rgba(210,225,245,0.16)');
+  rr(g, 4, 4, PW - 8, PH - 8, 54); g.fillStyle = grad; g.fill();
+  g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,0.75)'; g.stroke();
+  const shine = g.createLinearGradient(0, 0, 0, PH * 0.35);
+  shine.addColorStop(0, 'rgba(255,255,255,0.35)'); shine.addColorStop(1, 'rgba(255,255,255,0)');
+  rr(g, 10, 10, PW - 20, PH * 0.35, 48); g.fillStyle = shine; g.fill();
+
+  const font = '-apple-system, "SF Pro Display", "Segoe UI", system-ui, sans-serif';
+  g.fillStyle = '#fff';
+  g.font = `700 46px ${font}`;
+  g.fillText(xrPanel.placing ? 'Colocá el robot' : 'Robot de 6 ejes', 48, 86);
+  g.font = `500 26px ${font}`;
+  g.fillStyle = 'rgba(255,255,255,0.78)';
+  g.fillText(xrPanel.placing ? 'Apuntá a la mesa y apretá el gatillo' : 'Gatillo: elegir · Stick derecho ← →: girar · Grip: mover', 48, 128);
+
+  const button = (id, x, y, w, h, label, on = false, sub = '') => {
+    const hov = xrPanel.hover === id;
+    rr(g, x, y, w, h, h / 2);
+    g.fillStyle = on ? 'rgba(10,132,255,0.92)' : hov ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.2)';
+    g.fill();
+    g.lineWidth = 2; g.strokeStyle = on ? 'rgba(160,210,255,0.9)' : 'rgba(255,255,255,0.5)'; g.stroke();
+    g.fillStyle = '#fff';
+    g.textAlign = 'center';
+    g.font = `650 ${sub ? 30 : 28}px ${font}`;
+    g.fillText(label, x + w / 2, y + h / 2 + (sub ? -2 : 10));
+    if (sub) { g.font = `500 22px ${font}`; g.fillStyle = 'rgba(255,255,255,0.8)'; g.fillText(sub, x + w / 2, y + h / 2 + 26); }
+    g.textAlign = 'left';
+    B.push({ id, x, y, w, h });
+  };
+  if (xrPanel.placing) {
+    button('cancelPlace', 48, PH - 130, 300, 84, 'Cancelar');
+  } else {
+    // Articulaciones: 6 botones con su ángulo
+    const bw = 145, gap = 10;
+    JOINTS.forEach((d, i) => button(`j:${i}`, 48 + i * (bw + gap), 170, bw, 110, d.key,
+      selected === i, `${Math.round(joints[i]?.deg ?? 0)}°`));
+    // − / + y nombre de la articulación elegida
+    button('minus', 48, 305, 120, 96, '−  15°');
+    button('plus', 180, 305, 120, 96, '+  15°');
+    g.fillStyle = '#fff'; g.font = `650 34px ${font}`;
+    g.fillText(`${JOINTS[selected].key} · ${JOINTS[selected].name}`, 330, 352);
+    g.font = `500 24px ${font}`; g.fillStyle = 'rgba(255,255,255,0.75)';
+    g.fillText('También con el stick derecho', 330, 386);
+    // Poses
+    const names = [['erguido', 'Erguido'], ['inicio', 'Inicio'], ['tomar', 'Tomar'], ['dejar', 'Dejar']];
+    names.forEach(([k, l], i) => button(`pose:${k}`, 48 + i * 232, 430, 220, 84, l, xrPanel.pose === k));
+    button('demo', 48, 540, 300, 96, xrPanel.demo ? 'Pausar demo' : 'Demostración', xrPanel.demo);
+    button('axes', 360, 540, 260, 96, 'Ejes', xrPanel.axes);
+    button('place', 632, 540, 344, 96, xrMode === 'immersive-ar' ? 'Recolocar' : 'Frente a mí');
+  }
+  xrPanel.texture.needsUpdate = true;
+  xrPanel.dirty = false;
+}
+
+function panelHit(ray) {
+  const hit = ray.intersectObject(xrPanel.mesh, false)[0];
+  if (!hit?.uv) return null;
+  const px = hit.uv.x * PW, py = (1 - hit.uv.y) * PH;
+  const b = xrPanel.buttons.find((b) => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+  return { hit, id: b?.id ?? '__panel' };
+}
+function panelAction(id) {
+  if (id.startsWith('j:')) { selected = Number(id.slice(2)); }
+  else if (id === 'minus' || id === 'plus') { stopDemo(); markPose(null); setJoint(selected, (joints[selected]?.deg ?? 0) + (id === 'plus' ? 15 : -15)); }
+  else if (id.startsWith('pose:')) { stopDemo(); applyPose(id.slice(5)); }
+  else if (id === 'demo') { xrPanel.demo ? stopDemo() : startDemo(); }
+  else if (id === 'axes') { setAxes(!xrPanel.axes); }
+  else if (id === 'place') { xrMode === 'immersive-ar' ? enterPlacing() : placeInFront(); }
+  else if (id === 'cancelPlace') { xrPanel.placing = false; reticle.visible = false; anchor.visible = true; }
+  xrPanel.dirty = true;
+}
+
+/* =====================================================================
+   WebXR: VR (mesa virtual) y realidad mixta (hit-test sobre la mesa real)
+   ===================================================================== */
+let xrMode = null;
+const btnVR = document.getElementById('btnVR');
+const btnAR = document.getElementById('btnAR');
+const btnQL = document.getElementById('btnQL');
+const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (isIOS && document.createElement('a').relList.supports?.('ar')) btnQL.hidden = false;
+if (navigator.xr) {
+  navigator.xr.isSessionSupported('immersive-vr').then((ok) => { btnVR.hidden = !ok; }).catch(() => {});
+  navigator.xr.isSessionSupported('immersive-ar').then((ok) => { btnAR.hidden = !ok; }).catch(() => {});
+}
+btnVR.addEventListener('click', () => startXR('immersive-vr'));
+btnAR.addEventListener('click', () => startXR('immersive-ar'));
+
+async function startXR(mode) {
+  try {
+    const session = await navigator.xr.requestSession(mode, {
+      requiredFeatures: ['local-floor'],
+      optionalFeatures: mode === 'immersive-ar' ? ['hit-test', 'dom-overlay'] : [],
+      ...(mode === 'immersive-ar' ? { domOverlay: { root: document.getElementById('toast') } } : {}),
+    });
+    xrMode = mode;
+    session.addEventListener('end', onXREnd);
+    await renderer.xr.setSession(session);
+    if (session.supportedFrameRates?.includes(72)) session.updateTargetFrameRate?.(72).catch(() => {});
+    document.body.classList.add('in-xr');
+    camera.clearViewOffset();
+    if (mode === 'immersive-vr') {
+      scene.background = new THREE.Color(0x1b222c);
+      vrRoom.visible = true;
+      pendingFront = true;   // se ubica en el primer cuadro con la pose de la cabeza
+    } else {
+      scene.background = null;
+      vrRoom.visible = false;
+      shadowFloor.material.opacity = 0.32;
+      session.requestReferenceSpace('viewer').then((viewer) => session.requestHitTestSource?.({ space: viewer }))
+        .then((s) => (viewerHitSource = s)).catch(() => {});
+      enterPlacing();
+    }
+    xrPanel.mesh.visible = true;
+    xrPanel.dirty = true;
+  } catch (err) {
+    toast(`No se pudo iniciar: ${err.message}`, 4000);
+  }
+}
+function onXREnd() {
+  xrMode = null;
+  scene.background = null;
+  vrRoom.visible = false;
+  xrPanel.mesh.visible = false;
+  xrPanel.placing = false;
+  reticle.visible = false;
+  anchor.visible = true;
+  if (grabbedBy) release();
+  anchor.position.set(0, 0, 0);
+  anchor.quaternion.identity();
+  shadowFloor.material.opacity = 0.22;
+  viewerHitSource?.cancel?.(); viewerHitSource = null;
+  document.body.classList.remove('in-xr');
+  frameView();
+}
+
+let pendingFront = false;
+const v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), q1 = new THREE.Quaternion();
+function headPose() {
+  const cam = renderer.xr.getCamera();
+  cam.getWorldPosition(v1);
+  cam.getWorldDirection(v2);
+  v2.y = 0;
+  if (v2.lengthSq() < 1e-4) v2.set(0, 0, -1);
+  v2.normalize();
+  return { pos: v1.clone(), dir: v2.clone() };
+}
+function placeInFront() {
+  const { pos, dir } = headPose();
+  // Mesa virtual a 0,95 m delante; el robot de costado para que se vea el brazo
+  const c = pos.clone().addScaledVector(dir, 0.95);
+  vrRoom.position.set(c.x, 0, c.z);
+  vrRoom.rotation.y = Math.atan2(dir.x, dir.z);
+  anchor.position.set(c.x, xrMode === 'immersive-vr' ? TABLE_H : anchor.position.y, c.z);
+  anchor.rotation.set(0, Math.atan2(dir.x, dir.z) + Math.PI / 2, 0);
+  placePanel();
+}
+function placePanel() {
+  const { pos, dir } = headPose();
+  const left = new THREE.Vector3(dir.z, 0, -dir.x);   // izquierda de la mirada
+  const p = anchor.position.clone().addScaledVector(left, 0.62).addScaledVector(dir, -0.25);
+  p.y = Math.max(anchor.position.y + 0.5, pos.y - 0.25);
+  xrPanel.mesh.position.copy(p);
+  xrPanel.mesh.lookAt(pos.x, p.y, pos.z);
+}
+
+// Retícula de colocación (realidad mixta)
+const reticle = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.09, 48).rotateX(-Math.PI / 2),
+  new THREE.MeshBasicMaterial({ color: 0x0a84ff, transparent: true, opacity: 0.9 }));
+reticle.matrixAutoUpdate = false;
+reticle.visible = false;
+scene.add(reticle);
+let viewerHitSource = null;
+function enterPlacing() {
+  if (grabbedBy) release();
+  xrPanel.placing = true;
+  xrPanel.dirty = true;
+  anchor.visible = false;
+}
+function placeAtReticle() {
+  if (!reticle.visible) return false;
+  const { pos } = headPose();
+  v2.setFromMatrixPosition(reticle.matrix);
+  anchor.position.copy(v2);
+  anchor.rotation.set(0, Math.atan2(pos.x - v2.x, pos.z - v2.z) + Math.PI / 2, 0);
+  anchor.visible = true;
+  reticle.visible = false;
+  xrPanel.placing = false;
+  xrPanel.dirty = true;
+  placePanel();
+  return true;
+}
+
+// Controles
+const controllers = [];
+const raycaster = new THREE.Raycaster();
+const rayGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]);
+const factory = new XRControllerModelFactory();
+let grabbedBy = null;
+for (let i = 0; i < 2; i++) {
+  const c = renderer.xr.getController(i);
+  const line = new THREE.Line(rayGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
+  line.scale.z = 2;
+  c.add(line);
+  c.userData = { line, source: null, hitSource: null, prev: [] };
+  c.addEventListener('connected', (e) => {
+    c.userData.source = e.data;
+    const s = renderer.xr.getSession();
+    if (xrMode === 'immersive-ar' && s?.requestHitTestSource && e.data.targetRayMode === 'tracked-pointer') {
+      s.requestHitTestSource({ space: e.data.targetRaySpace }).then((h) => (c.userData.hitSource = h)).catch(() => {});
+    }
+  });
+  c.addEventListener('disconnected', () => { c.userData.hitSource?.cancel?.(); c.userData = { ...c.userData, source: null, hitSource: null }; });
+  c.addEventListener('selectstart', () => {
+    setRay(c);
+    const p = panelHit(raycaster);
+    if (p && p.id !== '__panel') { panelAction(p.id); pulse(c, 0.4, 30); return; }
+    if (xrPanel.placing && placeAtReticle()) pulse(c, 0.6, 60);
+  });
+  c.addEventListener('squeezestart', () => {
+    if (xrPanel.placing || grabbedBy) return;
+    c.attach(anchor);
+    grabbedBy = c;
+    pulse(c, 0.3, 30);
+  });
+  c.addEventListener('squeezeend', () => { if (grabbedBy === c) release(); });
+  scene.add(c);
+  const grip = renderer.xr.getControllerGrip(i);
+  grip.add(factory.createControllerModel(grip));
+  scene.add(grip);
+  controllers.push(c);
+}
+function release() {
+  scene.attach(anchor);
+  // la base vuelve a quedar horizontal (solo conserva el giro vertical)
+  const e = new THREE.Euler().setFromQuaternion(anchor.quaternion, 'YXZ');
+  anchor.rotation.set(0, e.y, 0);
+  grabbedBy = null;
+}
+function setRay(c) {
+  c.updateMatrixWorld();
+  raycaster.ray.origin.setFromMatrixPosition(c.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).transformDirection(c.matrixWorld);
+  raycaster.far = 10;
+}
+function pulse(c, v, ms) { c.userData.source?.gamepad?.hapticActuators?.[0]?.pulse?.(v, ms); }
+
+function updateXR(dt, frame) {
+  if (pendingFront && renderer.xr.getFrame()) { pendingFront = false; placeInFront(); }
+  // Rayos y hover sobre el panel
+  let hover = null;
+  for (const c of controllers) {
+    if (!c.userData.source) continue;
+    setRay(c);
+    const p = xrPanel.mesh.visible ? panelHit(raycaster) : null;
+    c.userData.line.scale.z = p ? p.hit.distance : 1.2;
+    if (p) hover = p.id;
+  }
+  if (hover !== xrPanel.hover) { xrPanel.hover = hover; xrPanel.dirty = true; }
+  // Retícula: hit-test del mando derecho, si no del primero que haya, si no de la mirada
+  if (xrPanel.placing && frame) {
+    const ref = renderer.xr.getReferenceSpace();
+    const src = controllers.find((c) => c.userData.hitSource && c.userData.source?.handedness === 'right') ?? controllers.find((c) => c.userData.hitSource);
+    const res = src ? frame.getHitTestResults(src.userData.hitSource)[0] : viewerHitSource ? frame.getHitTestResults(viewerHitSource)[0] : null;
+    const pose = res?.getPose(ref);
+    reticle.visible = !!pose;
+    if (pose) reticle.matrix.fromArray(pose.transform.matrix);
+  }
+  // Stick derecho: girar la articulación elegida. B/Y: volver a ubicar.
+  for (const c of controllers) {
+    const s = c.userData.source;
+    const gp = s?.gamepad;
+    if (!gp) continue;
+    const x = gp.axes[2] ?? 0;
+    if (s.handedness === 'right' && Math.abs(x) > 0.18 && joints.length) {
+      stopDemo();
+      if (xrPanel.pose) markPose(null);
+      setJoint(selected, joints[selected].deg + x * 70 * dt);
+    }
+    const b = gp.buttons[5]?.pressed;
+    if (b && !c.userData.prev[5]) { xrMode === 'immersive-ar' ? enterPlacing() : placeInFront(); }
+    c.userData.prev[5] = b;
+  }
+}
+
+/* =====================================================================
+   Bucle
+   ===================================================================== */
+const clock = new THREE.Clock();
+renderer.setAnimationLoop((t, frame) => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (tween) {
+    tween.t += dt / tween.dur;
+    const k = ease(Math.min(tween.t, 1));
+    tween.from.forEach((f, i) => setJoint(i, f + (tween.to[i] - f) * k));
+    if (tween.t >= 1) tween = null;
+  }
+  updateDemo(dt);
+  if (held.size && joints.length) {
+    stopDemo(); markPose(null);
+    setJoint(selected, joints[selected].deg + (held.has('ArrowRight') ? 1 : -1) * 60 * dt);
+  }
+  if (renderer.xr.isPresenting) {
+    updateXR(dt, frame);
+    if (xrPanel.dirty) drawPanel();
+  } else {
+    orbit.update();
+  }
+  renderer.render(scene, camera);
+});
+
+addEventListener('resize', () => {
+  renderer.setSize(innerWidth, innerHeight);
+  frameView();
+});
+if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __robot: { joints, setJoint, applyPose, startDemo, scene, camera, anchor, xrPanel, drawPanel, box } });
+</script>
+</body>
+</html>

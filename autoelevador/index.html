@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Autoelevador VR · Uruguay Logística</title>
+<meta name="description" content="Entrenamiento de conducción de autoelevador en VR para Meta Quest, la computadora y el celular: slalom, pallets y estanterías.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #0e1726; --ink-2: #4a5a6e; --tint: #0a84ff; --tint-ink: #fff;
+    --glass: rgba(255, 255, 255, .42); --glass-2: rgba(255, 255, 255, .18);
+    --edge: rgba(255, 255, 255, .75); --edge-2: rgba(255, 255, 255, .15);
+    --shadow: 0 18px 50px rgba(20, 40, 70, .18), 0 2px 8px rgba(20, 40, 70, .08);
+    --track: rgba(14, 23, 38, .12); --bg1: #e9eef5; --bg2: #cfd9e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f1f5fa; --ink-2: #a9b6c6; --tint: #3d9bff;
+      --glass: rgba(40, 48, 62, .46); --glass-2: rgba(40, 48, 62, .22);
+      --edge: rgba(255, 255, 255, .28); --edge-2: rgba(255, 255, 255, .06);
+      --shadow: 0 18px 50px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .3);
+      --track: rgba(255, 255, 255, .16); --bg1: #18202b; --bg2: #0b1018;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(120% 90% at 30% 10%, var(--bg1), var(--bg2));
+    color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---------- Liquid Glass ---------- */
+  .glass {
+    position: relative;
+    background: linear-gradient(160deg, var(--glass), var(--glass-2));
+    -webkit-backdrop-filter: blur(26px) saturate(185%);
+    backdrop-filter: blur(26px) saturate(185%);
+    border-radius: 26px;
+    box-shadow: var(--shadow), inset 0 1px 0 var(--edge), inset 0 -1px 0 var(--edge-2), inset 0 0 0 1px var(--edge-2);
+  }
+  /* brillo especular en el borde superior, como un vidrio curvo */
+  .glass::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0) 38%);
+    mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000); mask-composite: exclude;
+    -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000); -webkit-mask-composite: xor;
+    padding: 1px;
+  }
+
+  header.glass { position: fixed; top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+    padding: 14px 18px 14px 16px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 28px); }
+  header .logo { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(145deg, #3aa0ff, #0a5fd8); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); color: #fff; }
+  header h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  header p { margin: 1px 0 0; font-size: 12.5px; color: var(--ink-2); }
+
+  aside#panel { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top));
+    width: 320px; padding: 16px 16px 12px; max-height: calc(100% - 120px); overflow: auto; scrollbar-width: none; }
+  aside#panel::-webkit-scrollbar { display: none; }
+  .title-row { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 10px; }
+  h2 { margin: 0; font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+  .chip { font-size: 12px; color: var(--ink-2); }
+
+  .joint { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 6px 6px; border-radius: 14px; transition: background .2s; }
+  .joint:hover { background: rgba(255, 255, 255, .14); }
+  .joint label { font-size: 14px; font-weight: 560; }
+  .joint label small { color: var(--ink-2); font-weight: 450; margin-left: 4px; }
+  .joint output { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--ink-2); min-width: 52px; text-align: right; }
+  input[type=range] { grid-column: 1 / -1; width: 100%; height: 26px; margin: 0; background: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--tint) var(--p, 50%), var(--track) var(--p, 50%)); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--tint); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%;
+    background: rgba(255,255,255,.92); box-shadow: 0 2px 8px rgba(0,0,0,.22), inset 0 0 0 .5px rgba(0,0,0,.08); border: 0; }
+  input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.92);
+    box-shadow: 0 2px 8px rgba(0,0,0,.22); border: 0; }
+  input[type=range]:focus-visible { outline: none; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(10,132,255,.35), 0 2px 8px rgba(0,0,0,.22); }
+
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); padding: 3px; gap: 2px; border-radius: 14px; background: var(--track); margin: 12px 0 10px; }
+  .seg button { border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; font-weight: 560; padding: 8px 4px;
+    border-radius: 11px; cursor: pointer; transition: background .2s, box-shadow .2s; }
+  .seg button[aria-pressed=true] { background: rgba(255,255,255,.85); color: #0e1726; box-shadow: 0 2px 6px rgba(0,0,0,.14); }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 8px 6px; font-size: 14px; }
+  .switch { position: relative; width: 51px; height: 31px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 31px; background: var(--track); transition: background .25s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.3,1.4,.6,1); }
+  .switch input:checked + span { background: #34c759; }
+  .switch input:checked + span::after { transform: translateX(20px); }
+  .switch input:focus-visible + span { box-shadow: 0 0 0 4px rgba(10,132,255,.35); }
+
+  nav#dock { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 7px; border-radius: 999px; }
+  nav#dock button, nav#dock a { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 11px 16px;
+    font: inherit; font-size: 14.5px; font-weight: 600; color: var(--ink); background: none; cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background .2s, transform .15s; }
+  nav#dock button:hover, nav#dock a:hover { background: rgba(255,255,255,.22); }
+  nav#dock button:active { transform: scale(.96); }
+  nav#dock .primary { background: var(--tint); color: var(--tint-ink); box-shadow: 0 6px 18px rgba(10,132,255,.35), inset 0 1px 0 rgba(255,255,255,.35); }
+  nav#dock .primary:hover { background: var(--tint); filter: brightness(1.06); }
+  nav#dock button[hidden], nav#dock a[hidden] { display: none; }
+  nav#dock button:disabled { opacity: .45; cursor: default; }
+  svg.i { width: 18px; height: 18px; flex: none; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 74px); transform: translate(-50%, 8px);
+    padding: 10px 16px; border-radius: 16px; font-size: 13.5px; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .5s; }
+  #loading .glass { padding: 14px 20px; font-size: 14px; }
+
+  /* ---------- Manual ---------- */
+  dialog#manual { border: 0; padding: 0; background: none; color: var(--ink); width: min(720px, calc(100% - 24px)); max-height: min(86vh, 900px); }
+  dialog#manual::backdrop { background: rgba(10, 18, 30, .25); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  dialog#manual .glass { padding: 26px 28px 22px; max-height: min(86vh, 900px); overflow: auto; }
+  dialog#manual h2 { font-size: 24px; text-transform: none; letter-spacing: -.01em; color: var(--ink); margin: 0 0 4px; }
+  dialog#manual h3 { font-size: 16px; margin: 22px 0 6px; }
+  dialog#manual p, dialog#manual li { color: var(--ink-2); font-size: 14.5px; }
+  dialog#manual ul, dialog#manual ol { padding-left: 20px; margin: 6px 0; }
+  dialog#manual table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  dialog#manual td, dialog#manual th { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--track); }
+  dialog#manual th { color: var(--ink-2); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  kbd { font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 3px 6px; border-radius: 6px; background: var(--track); color: var(--ink); }
+  dialog#manual .close { position: sticky; top: 0; float: right; border: 0; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    background: var(--track); color: var(--ink); font-size: 18px; line-height: 34px; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--track); padding: 1px 5px; border-radius: 5px; }
+
+  @media (max-width: 760px) {
+    header.glass { right: 14px; }
+    aside#panel { top: auto; right: 10px; left: 10px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 70px); width: auto; max-height: 40vh; padding: 12px; }
+    .joint { padding: 4px 6px; }
+    nav#dock { width: calc(100% - 20px); justify-content: space-between; }
+    nav#dock button, nav#dock a { padding: 10px 11px; font-size: 13px; }
+    nav#dock .lbl-long { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>
+  aside#panel { width: 330px; }
+  .task { padding: 6px 6px 10px; }
+  .task .step { font-size: 12px; color: var(--ink-2); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+  .task h3 { margin: 4px 0 4px; font-size: 18px; letter-spacing: -.01em; }
+  .task p { margin: 0; color: var(--ink-2); font-size: 14px; }
+  .progress { display: flex; gap: 5px; margin: 10px 2px 2px; }
+  .progress i { flex: 1; height: 5px; border-radius: 5px; background: var(--track); }
+  .progress i.done { background: #34c759; } .progress i.now { background: var(--tint); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 6px; }
+  .stat { padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,.16); }
+  .stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .stat span { font-size: 11.5px; color: var(--ink-2); }
+  .shuttle { display: grid; grid-template-columns: repeat(3, 1fr); padding: 3px; gap: 2px; border-radius: 14px; background: var(--track); margin: 8px 0; }
+  .shuttle button { border: 0; background: none; font: inherit; font-weight: 700; padding: 8px; border-radius: 11px; color: var(--ink); cursor: pointer; }
+  .shuttle button[aria-pressed=true] { background: rgba(255,255,255,.88); color: #0e1726; box-shadow: 0 2px 6px rgba(0,0,0,.14); }
+  .row small { color: var(--ink-2); }
+  .score { font-variant-numeric: tabular-nums; }
+  #touch { position: fixed; inset: auto 0 calc(max(16px, env(safe-area-inset-bottom)) + 74px) 0; display: none; justify-content: space-between;
+    padding: 0 12px; pointer-events: none; }
+  #touch .pad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px); gap: 8px; pointer-events: auto; }
+  #touch button { border: 0; border-radius: 18px; font: 600 13px/1 inherit; color: var(--ink); touch-action: none; }
+  @media (hover: none) and (pointer: coarse) { #touch { display: flex; } }
+  .kbd-hint { font-size: 12.5px; color: var(--ink-2); margin: 8px 6px 2px; line-height: 1.6; }
+  @media (max-width: 760px) { aside#panel { max-height: 30vh; } .stats { margin-top: 6px; } .kbd-hint { display: none; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="Vista 3D del depósito y el autoelevador"></canvas>
+
+<header class="glass">
+  <div class="logo" aria-hidden="true">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 18V7h5l3 5v6"/><path d="M12 12h3"/><path d="M17 4v14h4"/><circle cx="6" cy="19" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>
+  </div>
+  <div>
+    <h1>Autoelevador VR</h1>
+    <p>Uruguay Logística · Centro de entrenamiento</p>
+  </div>
+</header>
+
+<aside id="panel" class="glass" aria-label="Tarea y estado del autoelevador">
+  <div class="task">
+    <div class="step" id="tStep">Tarea 1 de 6</div>
+    <h3 id="tTitle">Arranque seguro</h3>
+    <p id="tText"></p>
+    <div class="progress" id="prog" aria-hidden="true"></div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="sV">0,0</b><span>km/h</span></div>
+    <div class="stat"><b id="sH">0,00</b><span>horquillas (m)</span></div>
+    <div class="stat"><b id="sB">100</b><span>batería %</span></div>
+  </div>
+  <div class="shuttle" role="group" aria-label="Inversor de marcha">
+    <button data-s="F" aria-pressed="false">Adelante</button>
+    <button data-s="N" aria-pressed="true">Neutro</button>
+    <button data-s="R" aria-pressed="false">Reversa</button>
+  </div>
+  <div class="row"><span>Llave de encendido <small>(K)</small></span><label class="switch"><input type="checkbox" id="swKey" aria-label="Llave de encendido"><span></span></label></div>
+  <div class="row"><span>Parada de emergencia <small>(X)</small></span><label class="switch"><input type="checkbox" id="swStop" aria-label="Parada de emergencia"><span></span></label></div>
+  <div class="row"><span>Tiempo <b id="sTime" class="score">0:00</b></span><small id="sHits" class="score">0 choques · 0 conos</small></div>
+  <p class="kbd-hint"><kbd>W</kbd>/<kbd>S</kbd> acelerar y frenar · <kbd>A</kbd>/<kbd>D</kbd> volante · <kbd>↑</kbd>/<kbd>↓</kbd> horquillas ·
+    <kbd>Q</kbd>/<kbd>E</kbd> inclinar · <kbd>←</kbd>/<kbd>→</kbd> desplazar · <kbd>F</kbd> <kbd>N</kbd> <kbd>R</kbd> inversor · <kbd>C</kbd> cámara</p>
+</aside>
+
+<div id="touch" aria-hidden="true">
+  <div class="pad">
+    <span></span><button class="glass" data-t="acc">Acel.</button><span></span>
+    <button class="glass" data-t="left">◀</button><button class="glass" data-t="brk">Freno</button><button class="glass" data-t="right">▶</button>
+  </div>
+  <div class="pad" style="grid-template-columns: 56px; grid-template-rows: repeat(2, 56px)">
+    <button class="glass" data-t="up">▲</button><button class="glass" data-t="down">▼</button>
+  </div>
+</div>
+
+<nav id="dock" class="glass" aria-label="Acciones">
+  <button id="btnVR" class="primary" hidden>
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-4l-2-3h-2l-2 3H5a2 2 0 0 1-2-2z"/></svg>
+    <span>Entrar en VR</span></button>
+  <button id="btnCam">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+    <span>Vista de cabina</span></button>
+  <button id="btnManual">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 19V5"/><path d="M9 7h6"/></svg>
+    <span>Manual</span></button>
+  <button id="btnReset" aria-label="Reiniciar el entrenamiento">
+    <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+    <span class="lbl-long">Reiniciar</span></button>
+</nav>
+
+<div id="toast" class="glass" role="status" aria-live="polite"></div>
+<div id="loading"><div class="glass">Cargando el depósito y el autoelevador…</div></div>
+
+<dialog id="manual" aria-labelledby="manTitle">
+  <div class="glass">
+    <button class="close" aria-label="Cerrar el manual" onclick="this.closest('dialog').close()">×</button>
+    <h2 id="manTitle">Manual de uso</h2>
+    <p>Entrenamiento de conducción de un autoelevador eléctrico contrapesado de 2.500 kg (ORIENTAL E25) en un centro de distribución
+      uruguayo. Seis tareas: arranque seguro, slalom entre conos, retiro y entrega de un pallet, ubicación en estantería a 1,50 m y a 3,00 m,
+      y despacho de carne de exportación al muelle.</p>
+
+    <h3>En el Meta Quest (VR)</h3>
+    <table>
+      <thead><tr><th>Control</th><th>Acción</th></tr></thead>
+      <tbody>
+        <tr><td>Gatillo derecho</td><td>Acelerador</td></tr>
+        <tr><td>Gatillo izquierdo</td><td>Freno</td></tr>
+        <tr><td>Grip sobre la perilla del volante</td><td>Girar el volante con la mano (o stick izquierdo ← →)</td></tr>
+        <tr><td>Grip sobre una palanca de la consola</td><td>Tirar hacia vos o empujar: elevar/bajar (roja), inclinar (amarilla), desplazar (celeste)</td></tr>
+        <tr><td>Stick derecho ↑ ↓ / ← →</td><td>Subir y bajar las horquillas / desplazador lateral</td></tr>
+        <tr><td>Stick izquierdo ↑ ↓</td><td>Inclinar el mástil</td></tr>
+        <tr><td><b>A</b></td><td>Inversor: Adelante → Neutro → Reversa</td></tr>
+        <tr><td><b>B</b> / grip en la llave</td><td>Encender o apagar</td></tr>
+        <tr><td><b>X</b> / grip en el hongo rojo</td><td>Parada de emergencia</td></tr>
+        <tr><td><b>Y</b></td><td>Recentrar la vista en el asiento</td></tr>
+      </tbody>
+    </table>
+    <p>Jugá sentado. Si la vista queda corrida, apretá <b>Y</b> mirando hacia adelante. La visera del techo muestra la tarea; la pantalla
+      del tablero, velocidad, altura de horquillas, inversor y batería. Los espejos laterales y el convexo central muestran lo que pasa atrás.</p>
+
+    <h3>En la computadora</h3>
+    <table>
+      <tbody>
+        <tr><td><kbd>W</kbd> / <kbd>S</kbd> o <kbd>Espacio</kbd></td><td>Acelerar / frenar</td></tr>
+        <tr><td><kbd>A</kbd> / <kbd>D</kbd></td><td>Girar el volante</td></tr>
+        <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Subir / bajar horquillas</td></tr>
+        <tr><td><kbd>Q</kbd> / <kbd>E</kbd></td><td>Inclinar el mástil hacia atrás / adelante</td></tr>
+        <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Desplazador lateral</td></tr>
+        <tr><td><kbd>F</kbd> <kbd>N</kbd> <kbd>R</kbd></td><td>Inversor: adelante, neutro, reversa</td></tr>
+        <tr><td><kbd>K</kbd> · <kbd>X</kbd> · <kbd>C</kbd></td><td>Llave · parada de emergencia · cámara exterior o de cabina</td></tr>
+      </tbody>
+    </table>
+    <p>En el celular aparecen botones de acelerador, freno, volante y horquillas.</p>
+
+    <h3>Cómo tomar y dejar un pallet</h3>
+    <ol>
+      <li>Bajá las horquillas al piso (o a la altura del nivel) y alineate de frente al lado de 80 cm del pallet.</li>
+      <li>Entrá despacio hasta que las palas queden adentro de los dos huecos. Si están corridas, usá el desplazador lateral.</li>
+      <li>Subí las horquillas: cuando tocan el tablero, el pallet queda tomado (aviso «Tomaste…»). Inclinalo un poco hacia atrás.</li>
+      <li>Para dejarlo, ubicalo sobre la zona o el nivel y bajá: cuando se apoya, sacá las horquillas en reversa.</li>
+      <li>Para la estantería: subí antes de entrar, nunca con el autoelevador en movimiento y la carga alta.</li>
+    </ol>
+
+    <h3>Reglas de seguridad que evalúa</h3>
+    <ul>
+      <li>Arranque: llave, inversor y parada de emergencia liberada.</li>
+      <li>Choques contra estructuras o pallets a más de 2 km/h y conos derribados suman penalidad.</li>
+      <li>No se puede invertir el sentido sin frenar. Con carga, la velocidad máxima baja un 25 %.</li>
+    </ul>
+
+    <h3>Para docentes y desarrolladores</h3>
+    <ul>
+      <li><code>modelo/Autoelevador.glb</code> y <code>.fbx</code>: autoelevador con jerarquía y pivotes (18.718 triángulos), espejos con
+        materiales <code>M_Mirror_*</code> y pantalla <code>M_Dash_Screen</code>. El <code>.fbx</code> incluye colisiones <code>UCX_*</code>.</li>
+      <li><code>modelo/Deposito.glb</code> y <code>.fbx</code>: nave, estanterías, pallets y cargas (9.486 triángulos), con nodos de juego
+        (<code>Spawn_Forklift</code>, <code>DropZone_*</code>, <code>RackSlot_*</code>) y datos en <code>extras</code>.</li>
+      <li><code>fuente/</code>: archivo de Blender, texturas (BaseColor, Normal, ORM, Metallic, Roughness, AO) y los scripts que generan todo.</li>
+    </ul>
+    <p style="margin-top:18px;font-size:13px">Marcas, empresas y cargas son genéricas e ilustrativas.</p>
+  </div>
+</dialog>
+
+<script type="module" src="juego.js"></script>
+</body>
+</html>

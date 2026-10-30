@@ -7,6 +7,7 @@ No requieren instalación: se abren desde el navegador del visor.
 |---|---|---|
 | Atlas Portuario XR | `atlas.html` | Globo en realidad mixta con 30 puertos (5 por región), 8 pasos estratégicos, 12 corredores y vistas 360° de Wikimedia Commons |
 | Motor turbofán | `motor-jet/index.html` | Vista explosionada de un motor de reacción en 5 niveles, colocada sobre la mesa |
+| Autoelevador VR | `autoelevador/index.html` | Entrenamiento de conducción de un autoelevador en un depósito uruguayo: 6 tareas, volante, palancas, espejos y pallets. Modelos en glTF, FBX y Blender en `autoelevador/modelo` y `autoelevador/fuente` |
 | Robot de 6 ejes | `robot-6-ejes/index.html` | Brazo industrial a escala real con placa UTEC ITR Norte: articulaciones, poses, demostración y colocación en la mesa (VR, realidad mixta, Android e iPhone). Modelo en glTF, USDZ y Blender en `robot-6-ejes/modelo` y `robot-6-ejes/fuente` |
 | Centro Logístico 3D | [fork de logi](https://github.com/gabrielbengoechea/logi) | Recorrido a pie en VR por una nave de distribución |
 | Logística 3D | [fork de logistica3d](https://github.com/gabrielbengoechea/logistica3d) | Recorrido a pie en VR por la terminal de Montevideo |

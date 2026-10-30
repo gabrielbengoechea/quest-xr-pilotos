@@ -270,7 +270,7 @@ def _elbow(bm, hi=False):
     joint(bm, "Y", (0, 0.010, Z3), R_W, 0.104, cap_side=-1, ring_side=+1, ring=True)
 
 
-@part("Wrist_1_Joint", (0, 0.062, Z3), "Y", "Elbow_Joint")
+@part("Wrist_1", (0, 0.062, Z3), "Y", "Elbow_Joint")
 def _wrist1(bm, hi=False):
     joint(bm, "Y", (0, Y_W1 + 0.0005, Z3), R_W, 0.099, cap_side=+1, ring_side=-1, ring=False)
     # Cuello hacia el eje J5 (vertical)
@@ -278,7 +278,7 @@ def _wrist1(bm, hi=False):
     cyl(bm, "Z", (0, Y_W1, Z3 + R_W * 0.75 + 0.019), R_W * 1.0, 0.008, RUBBER, (RUBBER, RUBBER))
 
 
-@part("Wrist_2_Joint", (0, Y_W1, Z3 + R_W * 0.75 + 0.023), "Z", "Wrist_1_Joint")
+@part("Wrist_2", (0, Y_W1, Z3 + R_W * 0.75 + 0.023), "Z", "Wrist_1")
 def _wrist2(bm, hi=False):
     z0 = Z3 + R_W * 0.75 + 0.023
     top = Z5 + R_W
@@ -292,7 +292,7 @@ def _wrist2(bm, hi=False):
     cyl(bm, "X", (R_W + 0.006, Y_W1, Z5 - 0.022), 0.008, 0.016, RUBBER, (RUBBER, RUBBER), SEG_S)
 
 
-@part("Wrist_3_Flange", (0, Y6 + 0.008, Z5), "Y", "Wrist_2_Joint")
+@part("Wrist_3", (0, Y6 + 0.008, Z5), "Y", "Wrist_2")
 def _flange(bm, hi=False):
     y = Y6 + 0.008
     lofted(bm, "Y", (0, y, Z5), [(0, R_W * 0.84), (0.016, R_W * 0.84), (0.018, R_W * 0.76), (0.024, R_W * 0.66)],
@@ -302,9 +302,9 @@ def _flange(bm, hi=False):
     cyl(bm, "Y", (0, y + 0.034, Z5), 0.0125, 0.004, RUBBER, (RUBBER, RUBBER), SEG_S)
 
 
-ORDER = ["Base_Mesh", "Shoulder_Joint", "Upper_Arm", "Elbow_Joint", "Wrist_1_Joint", "Wrist_2_Joint", "Wrist_3_Flange"]
+ORDER = ["Base_Mesh", "Shoulder_Joint", "Upper_Arm", "Elbow_Joint", "Wrist_1", "Wrist_2", "Wrist_3"]
 UCX_NAME = {"Base_Mesh": "UCX_Base", "Shoulder_Joint": "UCX_Shoulder", "Upper_Arm": "UCX_Upper_Arm", "Elbow_Joint": "UCX_Elbow",
-            "Wrist_1_Joint": "UCX_Wrist_1", "Wrist_2_Joint": "UCX_Wrist_2", "Wrist_3_Flange": "UCX_Wrist_3"}
+            "Wrist_1": "UCX_Wrist_1", "Wrist_2": "UCX_Wrist_2", "Wrist_3": "UCX_Wrist_3"}
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -726,11 +726,11 @@ def build_high(coll, bool_coll):
                 _screw_ring(det, "Y", (0, Y_UA + 0.060 + 0.014 - 0.0001, Z2), 0.030, 6)
             elif name == "Elbow_Joint":
                 _screw_ring(det, "Y", (0, 0.010 - 0.058 - 0.014 + 0.0001, Z2), 0.028, 6)
-            elif name == "Wrist_1_Joint":
+            elif name == "Wrist_1":
                 _screw_ring(det, "Y", (0, Y_W1 + 0.050 + 0.014 - 0.0001, Z3), 0.022, 6)
-            elif name == "Wrist_2_Joint":
+            elif name == "Wrist_2":
                 _screw_ring(det, "Z", (0, Y_W1, Z5 + R_W + 0.013 - 0.0001), 0.022, 6)
-            elif name == "Wrist_3_Flange":
+            elif name == "Wrist_3":
                 _screw_ring(det, "Y", (0, Y6 + 0.008 + 0.032 - 0.0001, Z5), 0.025, 4, r=0.0032, start=math.pi / 4)
             if det.verts:
                 # los tornillos no llevan bisel; quedan como piezas sueltas apoyadas
@@ -743,8 +743,8 @@ def build_high(coll, bool_coll):
             "Shoulder_Joint": [("Y", (0, -0.040, Z1), R_J)],
             "Upper_Arm": [("Y", (0, Y_UA + 0.036, Z1), R_J), ("Y", (0, Y_UA + 0.036, Z2), R_J)],
             "Elbow_Joint": [("Y", (0, 0.010 - 0.034, Z2), R_J * 0.94)],
-            "Wrist_1_Joint": [("Y", (0, Y_W1 + 0.030, Z3), R_W)],
-            "Wrist_2_Joint": [("Z", (0, Y_W1, Z5 + R_W - 0.020), R_W)],
+            "Wrist_1": [("Y", (0, Y_W1 + 0.030, Z3), R_W)],
+            "Wrist_2": [("Z", (0, Y_W1, Z5 + R_W - 0.020), R_W)],
         }
         for name, lst in grooves.items():
             body = highs[name][0]

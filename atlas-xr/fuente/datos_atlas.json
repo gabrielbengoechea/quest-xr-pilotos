@@ -1,0 +1,1239 @@
+{
+ "REGIONS": {
+  "asia": {
+   "name": "Asia",
+   "color": "#ff6b5e"
+  },
+  "europa": {
+   "name": "Europa",
+   "color": "#5aa9ff"
+  },
+  "norte": {
+   "name": "América del Norte",
+   "color": "#3ddc97"
+  },
+  "latam": {
+   "name": "América Latina y el Caribe",
+   "color": "#ffd23f"
+  },
+  "africa": {
+   "name": "África",
+   "color": "#b48cff"
+  },
+  "oceania": {
+   "name": "Oceanía",
+   "color": "#3fe0e8"
+  },
+  "paso": {
+   "name": "Pasos estratégicos",
+   "color": "#ff8fd8"
+  }
+ },
+ "NODES": [
+  {
+   "id": "shanghai",
+   "kind": "port",
+   "region": "asia",
+   "name": "Shanghái",
+   "country": "China",
+   "lat": 30.63,
+   "lon": 122.07,
+   "teu": 55.06,
+   "year": "2025",
+   "src": "DynaLiners 2025",
+   "info": "Primer puerto de contenedores del mundo. Su terminal de aguas profundas de Yangshan, sobre islas unidas al continente por el puente de Donghai, está en gran parte automatizada. Puerta del delta del Yangtsé."
+  },
+  {
+   "id": "singapur",
+   "kind": "port",
+   "region": "asia",
+   "name": "Singapur",
+   "country": "Singapur",
+   "lat": 1.27,
+   "lon": 103.78,
+   "teu": 44.66,
+   "year": "2025",
+   "src": "DynaLiners 2025",
+   "info": "Mayor hub de transbordo del mundo, en la salida sur del Estrecho de Malaca: la mayoría de sus contenedores cambian de buque sin entrar al país. Concentra su futuro en el megapuerto de Tuas."
+  },
+  {
+   "id": "ningbo",
+   "kind": "port",
+   "region": "asia",
+   "name": "Ningbo-Zhoushan",
+   "country": "China",
+   "lat": 29.93,
+   "lon": 121.86,
+   "teu": 43.87,
+   "year": "2025",
+   "src": "DynaLiners 2025",
+   "info": "Vecino de Shanghái en la bahía de Hangzhou. Además de su volumen en contenedores, es el mayor puerto del mundo por toneladas totales, con fuerte peso de minerales y crudo."
+  },
+  {
+   "id": "shenzhen",
+   "kind": "port",
+   "region": "asia",
+   "name": "Shenzhen",
+   "country": "China",
+   "lat": 22.58,
+   "lon": 114.27,
+   "teu": 35.41,
+   "year": "2025",
+   "src": "DynaLiners 2025",
+   "info": "Agrupa terminales como Yantian, Shekou y Chiwan en el delta del río de las Perlas, corazón manufacturero y electrónico del sur de China."
+  },
+  {
+   "id": "qingdao",
+   "kind": "port",
+   "region": "asia",
+   "name": "Qingdao",
+   "country": "China",
+   "lat": 36,
+   "lon": 120.22,
+   "teu": 32.89,
+   "year": "2025",
+   "src": "DynaLiners 2025",
+   "info": "Principal puerto del norte de China, sobre el Mar Amarillo. Su terminal automatizada de Qianwan es una referencia mundial en automatización portuaria."
+  },
+  {
+   "id": "rotterdam",
+   "kind": "port",
+   "region": "europa",
+   "name": "Rotterdam",
+   "country": "Países Bajos",
+   "lat": 51.96,
+   "lon": 4.04,
+   "teu": 14.25,
+   "year": "2025",
+   "src": "Autoridad Portuaria de Rotterdam",
+   "info": "Mayor puerto de Europa. Maasvlakte II, ganada al mar, recibe los buques más grandes del mundo. Gateway hacia Alemania por el Rin, ferrocarril y ductos."
+  },
+  {
+   "id": "amberes",
+   "kind": "port",
+   "region": "europa",
+   "name": "Amberes-Brujas",
+   "country": "Bélgica",
+   "lat": 51.28,
+   "lon": 4.27,
+   "teu": 13.63,
+   "year": "2025",
+   "src": "Port of Antwerp-Bruges",
+   "info": "Segundo de Europa, nacido de la fusión de Amberes y Zeebrugge en 2022. Fuerte también en químicos y carga general."
+  },
+  {
+   "id": "hamburgo",
+   "kind": "port",
+   "region": "europa",
+   "name": "Hamburgo",
+   "country": "Alemania",
+   "lat": 53.53,
+   "lon": 9.92,
+   "teu": 8.3,
+   "year": "2025",
+   "src": "Port of Hamburg",
+   "growth": "+7,3 %",
+   "info": "Puerto fluvial sobre el Elba, a más de 100 km del mar. Gateway de Europa central y oriental con una de las mayores redes ferroviarias portuarias."
+  },
+  {
+   "id": "valencia",
+   "kind": "port",
+   "region": "europa",
+   "name": "Valencia",
+   "country": "España",
+   "lat": 39.44,
+   "lon": -0.32,
+   "teu": 5.48,
+   "year": "2025",
+   "src": "Valenciaport",
+   "growth": "+14,2 %",
+   "info": "Principal puerto de contenedores del Mediterráneo español; combina carga de importación y exportación con transbordo."
+  },
+  {
+   "id": "pireo",
+   "kind": "port",
+   "region": "europa",
+   "name": "El Pireo",
+   "country": "Grecia",
+   "lat": 37.95,
+   "lon": 23.58,
+   "teu": 4.79,
+   "year": "2025",
+   "src": "Piraeus Port Authority",
+   "growth": "−7,8 %",
+   "info": "Hub de transbordo del Mediterráneo oriental, operado mayoritariamente por COSCO. Muy expuesto a la caída del tráfico por Suez."
+  },
+  {
+   "id": "losangeles",
+   "kind": "port",
+   "region": "norte",
+   "name": "Los Ángeles",
+   "country": "EE.UU.",
+   "lat": 33.74,
+   "lon": -118.27,
+   "teu": 10.2,
+   "year": "2025*",
+   "src": "R. J. Sánchez / MundoMarítimo (*provisorio)",
+   "info": "Junto con Long Beach forma el complejo de la bahía de San Pedro, principal entrada de importaciones asiáticas a EE.UU. por la ruta transpacífica."
+  },
+  {
+   "id": "longbeach",
+   "kind": "port",
+   "region": "norte",
+   "name": "Long Beach",
+   "country": "EE.UU.",
+   "lat": 33.75,
+   "lon": -118.21,
+   "teu": 9.88,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Vecino de Los Ángeles. Sus terminales automatizadas y el corredor ferroviario Alameda llevan la carga hacia el interior del país."
+  },
+  {
+   "id": "nynj",
+   "kind": "port",
+   "region": "norte",
+   "name": "Nueva York–Nueva Jersey",
+   "country": "EE.UU.",
+   "lat": 40.67,
+   "lon": -74.15,
+   "teu": 8.89,
+   "year": "2025*",
+   "src": "R. J. Sánchez / MundoMarítimo (*provisorio)",
+   "info": "Principal puerto de la costa Este. Recibe servicios desde Asia vía Panamá y Suez y el tráfico transatlántico desde Europa."
+  },
+  {
+   "id": "savannah",
+   "kind": "port",
+   "region": "norte",
+   "name": "Savannah",
+   "country": "EE.UU.",
+   "lat": 32.13,
+   "lon": -81.14,
+   "teu": 5.7,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Su terminal Garden City es una de las mayores terminales de contenedores individuales de Norteamérica. Creció con el traslado de carga asiática hacia la costa Este."
+  },
+  {
+   "id": "houston",
+   "kind": "port",
+   "region": "norte",
+   "name": "Houston",
+   "country": "EE.UU.",
+   "lat": 29.68,
+   "lon": -95,
+   "teu": 4.3,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Puerto líder del Golfo de México. Sus terminales Barbours Cut y Bayport atienden a la industria petroquímica de Texas."
+  },
+  {
+   "id": "panamacaribe",
+   "kind": "port",
+   "region": "latam",
+   "name": "Panamá Caribe (Colón)",
+   "country": "Panamá",
+   "lat": 9.36,
+   "lon": -79.88,
+   "teu": 5.88,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Terminales del lado atlántico del canal (Manzanillo, Colón, Cristóbal). Primer complejo de la región, en buena parte por transbordo."
+  },
+  {
+   "id": "santos",
+   "kind": "port",
+   "region": "latam",
+   "name": "Santos",
+   "country": "Brasil",
+   "lat": -23.97,
+   "lon": -46.3,
+   "teu": 5.8,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Mayor puerto de Sudamérica y salida de la economía de São Paulo: café, azúcar, soja y carga contenedorizada de todo tipo."
+  },
+  {
+   "id": "cartagena",
+   "kind": "port",
+   "region": "latam",
+   "name": "Bahía de Cartagena",
+   "country": "Colombia",
+   "lat": 10.38,
+   "lon": -75.53,
+   "teu": 4.14,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Hub de transbordo del Caribe colombiano, a pocas horas de la entrada atlántica del Canal de Panamá."
+  },
+  {
+   "id": "panamapacifico",
+   "kind": "port",
+   "region": "latam",
+   "name": "Panamá Pacífico (Balboa)",
+   "country": "Panamá",
+   "lat": 8.95,
+   "lon": -79.57,
+   "teu": 4.03,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Lado pacífico del canal. Conecta servicios desde Asia y la costa oeste de Sudamérica con el Caribe."
+  },
+  {
+   "id": "manzanillo",
+   "kind": "port",
+   "region": "latam",
+   "name": "Manzanillo",
+   "country": "México",
+   "lat": 19.08,
+   "lon": -104.3,
+   "teu": 3.89,
+   "year": "2025",
+   "src": "R. J. Sánchez / MundoMarítimo",
+   "info": "Principal puerto mexicano del Pacífico; recibe la carga asiática con destino al centro del país."
+  },
+  {
+   "id": "tangermed",
+   "kind": "port",
+   "region": "africa",
+   "name": "Tanger Med",
+   "country": "Marruecos",
+   "lat": 35.89,
+   "lon": -5.5,
+   "teu": 11.11,
+   "year": "2025",
+   "src": "Tanger Med",
+   "info": "Mayor puerto de África y del Mediterráneo, frente a Algeciras en el Estrecho de Gibraltar. Hub de transbordo entre rutas este-oeste y norte-sur."
+  },
+  {
+   "id": "portsaid",
+   "kind": "port",
+   "region": "africa",
+   "name": "Port Said",
+   "country": "Egipto",
+   "lat": 31.23,
+   "lon": 32.36,
+   "teu": 3.9,
+   "year": "2024",
+   "src": "Lloyd's List One Hundred Ports 2025",
+   "info": "Entrada norte del Canal de Suez. Su volumen retrocedió con la crisis del Mar Rojo y depende de la vuelta de las navieras a Suez."
+  },
+  {
+   "id": "alejandria",
+   "kind": "port",
+   "region": "africa",
+   "name": "Alejandría",
+   "country": "Egipto",
+   "lat": 31.18,
+   "lon": 29.86,
+   "teu": 2.2,
+   "year": "2024",
+   "src": "Lloyd's List One Hundred Ports 2025",
+   "info": "Principal puerto mediterráneo de Egipto para carga de importación y exportación propia."
+  },
+  {
+   "id": "mombasa",
+   "kind": "port",
+   "region": "africa",
+   "name": "Mombasa",
+   "country": "Kenia",
+   "lat": -4.05,
+   "lon": 39.64,
+   "teu": 2.11,
+   "year": "2025",
+   "src": "Kenya Ports Authority",
+   "info": "Puerta de África Oriental: abastece a Kenia y a países sin litoral como Uganda, Ruanda y Sudán del Sur."
+  },
+  {
+   "id": "lome",
+   "kind": "port",
+   "region": "africa",
+   "name": "Lomé",
+   "country": "Togo",
+   "lat": 6.13,
+   "lon": 1.28,
+   "teu": 2.06,
+   "year": "2024",
+   "src": "Lloyd's List One Hundred Ports 2025",
+   "info": "Hub de transbordo de África Occidental gracias a su calado natural profundo en el Golfo de Guinea."
+  },
+  {
+   "id": "melbourne",
+   "kind": "port",
+   "region": "oceania",
+   "name": "Melbourne",
+   "country": "Australia",
+   "lat": -37.82,
+   "lon": 144.92,
+   "teu": 3.52,
+   "year": "AF 2025/26",
+   "src": "Port of Melbourne",
+   "info": "Mayor puerto de contenedores de Australia, dentro de la bahía de Port Phillip."
+  },
+  {
+   "id": "sidney",
+   "kind": "port",
+   "region": "oceania",
+   "name": "Sídney (Port Botany)",
+   "country": "Australia",
+   "lat": -33.97,
+   "lon": 151.22,
+   "teu": 2.8,
+   "year": "último año",
+   "src": "NSW Ports (aprox.)",
+   "info": "Principal puerta de Nueva Gales del Sur, junto al aeropuerto de Sídney."
+  },
+  {
+   "id": "brisbane",
+   "kind": "port",
+   "region": "oceania",
+   "name": "Brisbane",
+   "country": "Australia",
+   "lat": -27.38,
+   "lon": 153.17,
+   "teu": 1.62,
+   "year": "AF 2024/25",
+   "src": "Port of Brisbane",
+   "info": "Puerto de Queensland, en la desembocadura del río Brisbane."
+  },
+  {
+   "id": "tauranga",
+   "kind": "port",
+   "region": "oceania",
+   "name": "Tauranga",
+   "country": "Nueva Zelanda",
+   "lat": -37.65,
+   "lon": 176.18,
+   "teu": 1.2,
+   "year": "AF a jun. 2025",
+   "src": "Port of Tauranga",
+   "info": "Principal puerto de Nueva Zelanda, clave en la exportación de troncos, lácteos y kiwis."
+  },
+  {
+   "id": "auckland",
+   "kind": "port",
+   "region": "oceania",
+   "name": "Auckland",
+   "country": "Nueva Zelanda",
+   "lat": -36.84,
+   "lon": 174.78,
+   "teu": 0.93,
+   "year": "AF a jun. 2026",
+   "src": "Ports of Auckland",
+   "info": "Puerto de la mayor ciudad neozelandesa; su terminal de contenedores está en pleno centro urbano."
+  },
+  {
+   "id": "suez",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Canal de Suez",
+   "country": "Egipto",
+   "lat": 30.6,
+   "lon": 32.34,
+   "view": [
+    30.6,
+    32.32
+   ],
+   "status": "Recuperación parcial",
+   "src": "BIMCO/Clarksons (oct. 2026); EIA (1S 2025)",
+   "info": "Une el Mediterráneo con el Mar Rojo. Tras casi tres años de desvíos por el Cabo, en la primera quincena de octubre de 2026 la capacidad semanal de portacontenedores superó por primera vez el 50 % de los niveles previos a la crisis. Petróleo: 4,9 M b/d con el oleoducto SUMED."
+  },
+  {
+   "id": "panama",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Canal de Panamá",
+   "country": "Panamá",
+   "lat": 9.08,
+   "lon": -79.68,
+   "view": [
+    8.997,
+    -79.591
+   ],
+   "status": "Récord de tonelaje",
+   "src": "Autoridad del Canal de Panamá (AF 2026)",
+   "info": "Año fiscal 2026: 13.951 tránsitos (+4,1 %) y tonelaje récord de 521 millones de toneladas CP/SUAB; las esclusas neopanamax movieron el 52,2 % del tonelaje. Ganó demanda energética con la crisis de Ormuz."
+  },
+  {
+   "id": "ormuz",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Estrecho de Ormuz",
+   "country": "Irán / Omán",
+   "lat": 26.57,
+   "lon": 56.4,
+   "view": [
+    26.18,
+    56.25
+   ],
+   "status": "Prácticamente cerrado",
+   "src": "EIA (1S 2025); IMF PortWatch vía straits.live (18/10/2026)",
+   "info": "En condiciones normales pasan 20,9 M b/d de petróleo (cerca del 20 % del consumo mundial) y más del 20 % del GNL. Con la guerra de Irán de 2026 el tránsito colapsó: el 18/10/2026 hubo 4 cruces frente a unos 85 diarios antes de la crisis."
+  },
+  {
+   "id": "malaca",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Estrecho de Malaca",
+   "country": "Malasia / Indonesia",
+   "lat": 2.6,
+   "lon": 101.2,
+   "view": [
+    2.19,
+    102.25
+   ],
+   "status": "Operativo",
+   "src": "EIA (1S 2025)",
+   "info": "Ruta más corta entre el Índico y el Pacífico. Es el mayor punto de tránsito petrolero del mundo: 23,2 M b/d, el 29 % del petróleo transportado por mar."
+  },
+  {
+   "id": "babelmandeb",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Bab el-Mandeb",
+   "country": "Yemen / Yibuti",
+   "lat": 12.6,
+   "lon": 43.35,
+   "view": [
+    11.6,
+    43.14
+   ],
+   "status": "Riesgo alto",
+   "src": "EIA (1S 2025); Reuters (ago. 2026)",
+   "info": "Entrada sur del Mar Rojo: 4,2 M b/d de petróleo. Los ataques hutíes desde fines de 2023 provocaron los desvíos por el Cabo; en julio de 2026 los hutíes declararon un bloqueo naval contra Arabia Saudita."
+  },
+  {
+   "id": "gibraltar",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Estrecho de Gibraltar",
+   "country": "España / Marruecos",
+   "lat": 35.97,
+   "lon": -5.6,
+   "view": [
+    36.13,
+    -5.35
+   ],
+   "status": "Operativo",
+   "src": "Referencia general",
+   "info": "Une el Atlántico con el Mediterráneo. En sus orillas compiten dos grandes hubs de transbordo: Algeciras y Tanger Med."
+  },
+  {
+   "id": "bosforo",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Bósforo (estrechos turcos)",
+   "country": "Turquía",
+   "lat": 41.1,
+   "lon": 29.06,
+   "view": [
+    41.08,
+    29.04
+   ],
+   "status": "Operativo",
+   "src": "EIA (1S 2025)",
+   "info": "Junto con los Dardanelos, única salida marítima del Mar Negro: 3,7 M b/d de petróleo, además de granos y acero de la región."
+  },
+  {
+   "id": "cabo",
+   "kind": "choke",
+   "region": "paso",
+   "name": "Cabo de Buena Esperanza",
+   "country": "Sudáfrica",
+   "lat": -34.6,
+   "lon": 18.4,
+   "view": [
+    -34.357,
+    18.474
+   ],
+   "status": "Ruta de desvío",
+   "src": "EIA (1S 2025)",
+   "info": "No es un estrecho, pero es la alternativa a Suez: 9,1 M b/d de petróleo (11 % del marítimo). Absorbió la mayoría de los servicios Asia–Europa durante la crisis del Mar Rojo, a costa de entre 10 y 14 días más de navegación."
+  }
+ ],
+ "WP": {
+  "shanghai": [
+   30.63,
+   122.07
+  ],
+  "taiwan": [
+   25,
+   120.5
+  ],
+  "scsN": [
+   18,
+   115
+  ],
+  "scsS": [
+   8,
+   108.5
+  ],
+  "singapur": [
+   1.27,
+   103.78
+  ],
+  "malaca": [
+   2.6,
+   101.2
+  ],
+  "malacaN": [
+   5.9,
+   97.8
+  ],
+  "aceh": [
+   6.3,
+   94.5
+  ],
+  "sriLanka": [
+   5.5,
+   80.6
+  ],
+  "arabia": [
+   11.5,
+   58
+  ],
+  "aden": [
+   12.3,
+   48
+  ],
+  "babel": [
+   12.6,
+   43.35
+  ],
+  "marRojo": [
+   20,
+   38.5
+  ],
+  "suezS": [
+   29.9,
+   32.55
+  ],
+  "suez": [
+   30.6,
+   32.34
+  ],
+  "portSaid": [
+   31.25,
+   32.36
+  ],
+  "creta": [
+   34,
+   24.5
+  ],
+  "jonico": [
+   35.3,
+   16
+  ],
+  "sicilia": [
+   37.4,
+   11.6
+  ],
+  "cerdena": [
+   37.9,
+   9
+  ],
+  "baleares": [
+   37,
+   1
+  ],
+  "gibraltar": [
+   35.97,
+   -5.6
+  ],
+  "espartel": [
+   36,
+   -6.3
+  ],
+  "sanVicente": [
+   36.6,
+   -9.6
+  ],
+  "finisterre": [
+   43.5,
+   -10
+  ],
+  "ushant": [
+   48.6,
+   -6
+  ],
+  "mancha": [
+   50.2,
+   -1
+  ],
+  "dover": [
+   51.1,
+   1.6
+  ],
+  "rotterdam": [
+   51.96,
+   4.04
+  ],
+  "indico": [
+   -10,
+   80
+  ],
+  "madagascarS": [
+   -30,
+   40
+  ],
+  "agulhas": [
+   -36,
+   20
+  ],
+  "cabo": [
+   -34.6,
+   18.4
+  ],
+  "namibia": [
+   -25,
+   10
+  ],
+  "guinea": [
+   -5,
+   -3
+  ],
+  "senegal": [
+   10,
+   -20
+  ],
+  "canarias": [
+   25,
+   -20
+  ],
+  "marruecos": [
+   35,
+   -10
+  ],
+  "tangerMed": [
+   35.89,
+   -5.5
+  ],
+  "kyushu": [
+   31,
+   129
+  ],
+  "shikoku": [
+   32.5,
+   135
+  ],
+  "tokio": [
+   34.2,
+   140.5
+  ],
+  "losAngeles": [
+   33.74,
+   -118.27
+  ],
+  "hawaii": [
+   20,
+   -155
+  ],
+  "pacificoMx": [
+   12,
+   -100
+  ],
+  "panamaPac": [
+   8.95,
+   -79.57
+  ],
+  "panama": [
+   9.08,
+   -79.68
+  ],
+  "panamaCar": [
+   9.36,
+   -79.88
+  ],
+  "caribe": [
+   12.5,
+   -80.5
+  ],
+  "yucatan": [
+   21.6,
+   -85.6
+  ],
+  "golfoMx": [
+   24.2,
+   -85.2
+  ],
+  "keys": [
+   24.1,
+   -81
+  ],
+  "florida": [
+   25.6,
+   -79.7
+  ],
+  "georgia": [
+   28.5,
+   -79.9
+  ],
+  "savannahMar": [
+   31.6,
+   -80.4
+  ],
+  "savannah": [
+   32.13,
+   -81.14
+  ],
+  "hatteras": [
+   35,
+   -74.8
+  ],
+  "nyMar": [
+   40.3,
+   -73.8
+  ],
+  "nynj": [
+   40.67,
+   -74.15
+  ],
+  "atlantico": [
+   42,
+   -50
+  ],
+  "celta": [
+   49.5,
+   -6
+  ],
+  "ormuz": [
+   26.57,
+   56.4
+  ],
+  "golfoOman": [
+   24.5,
+   58.5
+  ],
+  "arabigo": [
+   18,
+   63
+  ],
+  "chinaE": [
+   32,
+   123
+  ],
+  "amarillo": [
+   34.5,
+   122
+  ],
+  "qingdao": [
+   36,
+   120.22
+  ],
+  "caboVerde": [
+   15,
+   -27
+  ],
+  "natal": [
+   -5,
+   -33
+  ],
+  "recife": [
+   -9,
+   -34.2
+  ],
+  "salvador": [
+   -13,
+   -37.5
+  ],
+  "abrolhos": [
+   -19,
+   -38.5
+  ],
+  "caboFrio": [
+   -23,
+   -41
+  ],
+  "santos": [
+   -23.97,
+   -46.3
+  ],
+  "atlSur": [
+   -29,
+   -15
+  ],
+  "brasilS": [
+   -25.5,
+   -44
+  ],
+  "riau": [
+   1.2,
+   105.2
+  ],
+  "karimata": [
+   -2.5,
+   109
+  ],
+  "java": [
+   -6,
+   112
+  ],
+  "lombok": [
+   -8.7,
+   115.75
+  ],
+  "australiaO": [
+   -20,
+   112
+  ],
+  "leeuwin": [
+   -35.2,
+   114.5
+  ],
+  "bight": [
+   -36.5,
+   128
+  ],
+  "bassO": [
+   -39,
+   142.5
+  ],
+  "phillip": [
+   -38.45,
+   144.65
+  ],
+  "melbourne": [
+   -37.82,
+   144.92
+  ],
+  "bassE": [
+   -39.5,
+   146.5
+  ],
+  "howe": [
+   -38.5,
+   149
+  ],
+  "nswS": [
+   -37,
+   150.3
+  ],
+  "sidney": [
+   -33.97,
+   151.22
+  ],
+  "pireo": [
+   37.95,
+   23.58
+  ],
+  "saronico": [
+   37.6,
+   23.9
+  ],
+  "kafireas": [
+   38.1,
+   24.6
+  ],
+  "egeo": [
+   39.5,
+   25.3
+  ],
+  "dardanelos": [
+   40,
+   26.15
+  ],
+  "canakkale": [
+   40.4,
+   26.7
+  ],
+  "marmara": [
+   40.8,
+   28.5
+  ],
+  "bosforo": [
+   41.1,
+   29.06
+  ],
+  "somalia": [
+   -2,
+   52
+  ],
+  "mombasaMar": [
+   -4.3,
+   40.5
+  ],
+  "mombasa": [
+   -4.05,
+   39.64
+  ],
+  "liberia": [
+   3.8,
+   -9.5
+  ],
+  "golfoGuinea": [
+   3.5,
+   -5
+  ],
+  "ghana": [
+   4.5,
+   -1
+  ],
+  "lome": [
+   6.13,
+   1.28
+  ]
+ },
+ "CORRIDORS": [
+  {
+   "name": "Asia–Europa vía Suez",
+   "color": "#ffd9a0",
+   "status": "En recuperación",
+   "path": [
+    "shanghai",
+    "taiwan",
+    "scsN",
+    "scsS",
+    "singapur",
+    "malaca",
+    "malacaN",
+    "aceh",
+    "sriLanka",
+    "arabia",
+    "aden",
+    "babel",
+    "marRojo",
+    "suezS",
+    "suez",
+    "portSaid",
+    "creta",
+    "jonico",
+    "sicilia",
+    "cerdena",
+    "baleares",
+    "gibraltar",
+    "espartel",
+    "sanVicente",
+    "finisterre",
+    "ushant",
+    "mancha",
+    "dover",
+    "rotterdam"
+   ],
+   "info": "Columna vertebral del comercio contenedorizado este-oeste: une China y Singapur con el norte de Europa por Malaca, Bab el-Mandeb, Suez y Gibraltar. En octubre de 2026 la capacidad que cruza Suez volvió a superar la mitad de los niveles previos a la crisis."
+  },
+  {
+   "name": "Asia–Europa vía Cabo",
+   "color": "#ffb547",
+   "status": "Ruta de desvío",
+   "path": [
+    "singapur",
+    "malaca",
+    "malacaN",
+    "aceh",
+    "indico",
+    "madagascarS",
+    "agulhas",
+    "cabo",
+    "namibia",
+    "guinea",
+    "senegal",
+    "canarias",
+    "marruecos",
+    "espartel",
+    "tangerMed",
+    "espartel",
+    "sanVicente",
+    "finisterre",
+    "ushant",
+    "mancha",
+    "dover",
+    "rotterdam"
+   ],
+   "info": "Alternativa que absorbió la mayoría de los servicios Asia–Europa durante la crisis del Mar Rojo. Suma entre 10 y 14 días de navegación y más combustible, pero evita Bab el-Mandeb."
+  },
+  {
+   "name": "Transpacífico",
+   "color": "#7fd1ff",
+   "status": "Operativo",
+   "path": [
+    "shanghai",
+    "kyushu",
+    "shikoku",
+    "tokio",
+    "losAngeles"
+   ],
+   "info": "Principal ruta de importación asiática hacia EE.UU. Desembarca en el complejo Los Ángeles–Long Beach, conectado con el interior por tren."
+  },
+  {
+   "name": "Asia–Costa Este de EE.UU. vía Panamá",
+   "color": "#9be7c4",
+   "status": "Operativo",
+   "path": [
+    "shanghai",
+    "kyushu",
+    "shikoku",
+    "tokio",
+    "hawaii",
+    "pacificoMx",
+    "panamaPac",
+    "panama",
+    "panamaCar",
+    "caribe",
+    "yucatan",
+    "golfoMx",
+    "keys",
+    "florida",
+    "georgia",
+    "savannahMar",
+    "savannah",
+    "savannahMar",
+    "hatteras",
+    "nyMar",
+    "nynj"
+   ],
+   "info": "Alternativa \"todo agua\" al transpacífico más tren: cruza el Canal de Panamá hacia Savannah y Nueva York–Nueva Jersey."
+  },
+  {
+   "name": "Transatlántico Norte",
+   "color": "#b9c8ff",
+   "status": "Operativo",
+   "path": [
+    "rotterdam",
+    "dover",
+    "mancha",
+    "celta",
+    "atlantico",
+    "nyMar",
+    "nynj"
+   ],
+   "info": "Une el norte de Europa con la costa Este de EE.UU.; uno de los corredores más antiguos del comercio marítimo."
+  },
+  {
+   "name": "Ruta energética Golfo–Asia",
+   "color": "#ff7a6b",
+   "status": "Interrumpida",
+   "path": [
+    "ormuz",
+    "golfoOman",
+    "arabigo",
+    "sriLanka",
+    "aceh",
+    "malacaN",
+    "malaca",
+    "singapur",
+    "scsS",
+    "scsN",
+    "taiwan",
+    "chinaE",
+    "amarillo",
+    "qingdao"
+   ],
+   "info": "Lleva crudo y GNL del Golfo Pérsico a China, Japón y Corea por Ormuz y Malaca. En 2026 quedó prácticamente interrumpida por el bloqueo de Ormuz."
+  },
+  {
+   "name": "Norte de Europa–Costa Este de Sudamérica",
+   "color": "#ffe680",
+   "status": "Operativo",
+   "path": [
+    "rotterdam",
+    "dover",
+    "mancha",
+    "ushant",
+    "finisterre",
+    "caboVerde",
+    "natal",
+    "recife",
+    "salvador",
+    "abrolhos",
+    "caboFrio",
+    "santos"
+   ],
+   "info": "Conecta Rotterdam con Santos y los puertos del Atlántico sur, incluidos los del Río de la Plata."
+  },
+  {
+   "name": "Asia–Costa Este de Sudamérica",
+   "color": "#ffc4e8",
+   "status": "Operativo",
+   "path": [
+    "singapur",
+    "malaca",
+    "malacaN",
+    "aceh",
+    "indico",
+    "madagascarS",
+    "agulhas",
+    "cabo",
+    "atlSur",
+    "brasilS",
+    "santos"
+   ],
+   "info": "Trae manufacturas asiáticas a Brasil, Uruguay y Argentina y lleva granos, carnes y celulosa hacia Asia, rodeando el Cabo de Buena Esperanza."
+  },
+  {
+   "name": "Asia–Oceanía",
+   "color": "#8ff0f5",
+   "status": "Operativo",
+   "path": [
+    "singapur",
+    "riau",
+    "karimata",
+    "java",
+    "lombok",
+    "australiaO",
+    "leeuwin",
+    "bight",
+    "bassO",
+    "phillip",
+    "melbourne",
+    "phillip",
+    "bassE",
+    "howe",
+    "nswS",
+    "sidney"
+   ],
+   "info": "Abastece a Australia desde los hubs del sudeste asiático, cruzando el archipiélago indonesio."
+  },
+  {
+   "name": "Mediterráneo–Mar Negro",
+   "color": "#d0b8ff",
+   "status": "Operativo",
+   "path": [
+    "pireo",
+    "saronico",
+    "kafireas",
+    "egeo",
+    "dardanelos",
+    "canakkale",
+    "marmara",
+    "bosforo"
+   ],
+   "info": "Los Dardanelos y el Bósforo son la única salida marítima del Mar Negro: granos, acero y petróleo."
+  },
+  {
+   "name": "Asia–África Oriental",
+   "color": "#c7a6ff",
+   "status": "Operativo",
+   "path": [
+    "singapur",
+    "malaca",
+    "malacaN",
+    "aceh",
+    "sriLanka",
+    "somalia",
+    "mombasaMar",
+    "mombasa"
+   ],
+   "info": "Conecta los hubs asiáticos con Mombasa, puerta de Kenia y de los países sin litoral de la región."
+  },
+  {
+   "name": "Norte de Europa–África Occidental",
+   "color": "#e3c8ff",
+   "status": "Operativo",
+   "path": [
+    "rotterdam",
+    "dover",
+    "mancha",
+    "ushant",
+    "finisterre",
+    "canarias",
+    "senegal",
+    "liberia",
+    "golfoGuinea",
+    "ghana",
+    "lome"
+   ],
+   "info": "Une Europa con los hubs del Golfo de Guinea, como Lomé."
+  }
+ ]
+}

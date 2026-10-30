@@ -41,9 +41,9 @@ Base de 18 cm, alcance de unos 88 cm, 8.122 triángulos y un solo material PBR.
 | J1 | `Shoulder_Joint` | Base: gira todo el brazo sobre la vertical |
 | J2 | `Upper_Arm` | Hombro: sube o baja el brazo superior |
 | J3 | `Elbow_Joint` | Codo: pliega el antebrazo |
-| J4 | `Wrist_1_Joint` | Muñeca 1 |
-| J5 | `Wrist_2_Joint` | Muñeca 2 |
-| J6 | `Wrist_3_Flange` | Brida de herramienta |
+| J4 | `Wrist_1` | Muñeca 1 |
+| J5 | `Wrist_2` | Muñeca 2 |
+| J6 | `Wrist_3` | Brida de herramienta |
 
 ## Archivos
 

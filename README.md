@@ -9,6 +9,8 @@ No requieren instalación: se abren desde el navegador del visor.
 | Motor turbofán | `motor-jet/index.html` | Vista explosionada de un motor de reacción en 5 niveles, colocada sobre la mesa |
 | Autoelevador VR | `autoelevador/index.html` | Entrenamiento de conducción de un autoelevador en un depósito uruguayo: 6 tareas, volante, palancas, espejos y pallets. Modelos en glTF, FBX y Blender en `autoelevador/modelo` y `autoelevador/fuente` |
 | Robot de 6 ejes | `robot-6-ejes/index.html` | Brazo industrial a escala real con placa UTEC ITR Norte: articulaciones, poses, demostración y colocación en la mesa (VR, realidad mixta, Android e iPhone). Modelo en glTF, USDZ y Blender en `robot-6-ejes/modelo` y `robot-6-ejes/fuente` |
+| RA de mesa | `ar-mesa/index.html` | Colocación SLAM estilo Medición (retícula, hit-test, ancla, luz estimada y sombras) para el brazo robótico y Atlas XR: Quest passthrough, Android (ARCore), iPhone (Quick Look) y simulador. Especificación y pseudocódigo nativo en `ar-mesa/ESPECIFICACION.md` |
+| Atlas XR (modelo) | `atlas-xr/` | Globo logístico de mesa Ø 45 cm, 9.760 triángulos, 39 nodos con datos y 12 rutas emisivas; glTF, USDZ y Blender, con el script que lo genera |
 | Centro Logístico 3D | [fork de logi](https://github.com/gabrielbengoechea/logi) | Recorrido a pie en VR por una nave de distribución |
 | Logística 3D | [fork de logistica3d](https://github.com/gabrielbengoechea/logistica3d) | Recorrido a pie en VR por la terminal de Montevideo |
 | Estiba | [fork de Estiba-VR](https://github.com/gabrielbengoechea/Estiba-VR) | Exploración libre en VR de una terminal de contenedores |

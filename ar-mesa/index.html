@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RA de mesa · UTEC ITR Norte</title>
+<meta name="description" content="Colocación en realidad aumentada estilo Medición para el brazo robótico de 6 ejes y el globo logístico Atlas XR: Meta Quest, Android e iPhone.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b1018">
+<style>
+  :root {
+    color-scheme: light dark;
+    --ink: #0e1726; --ink-2: #4a5a6e; --tint: #0a84ff; --tint-ink: #fff;
+    --glass: rgba(255, 255, 255, .42); --glass-2: rgba(255, 255, 255, .18);
+    --edge: rgba(255, 255, 255, .75); --edge-2: rgba(255, 255, 255, .15);
+    --shadow: 0 18px 50px rgba(20, 40, 70, .18), 0 2px 8px rgba(20, 40, 70, .08);
+    --track: rgba(14, 23, 38, .12); --bg1: #e9eef5; --bg2: #cfd9e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink: #f1f5fa; --ink-2: #a9b6c6; --tint: #3d9bff;
+      --glass: rgba(40, 48, 62, .46); --glass-2: rgba(40, 48, 62, .22);
+      --edge: rgba(255, 255, 255, .28); --edge-2: rgba(255, 255, 255, .06);
+      --shadow: 0 18px 50px rgba(0, 0, 0, .45), 0 2px 8px rgba(0, 0, 0, .3);
+      --track: rgba(255, 255, 255, .16); --bg1: #18202b; --bg2: #0b1018;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(120% 90% at 30% 10%, var(--bg1), var(--bg2));
+    color: var(--ink); font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---------- Liquid Glass ---------- */
+  .glass {
+    position: relative;
+    background: linear-gradient(160deg, var(--glass), var(--glass-2));
+    -webkit-backdrop-filter: blur(26px) saturate(185%);
+    backdrop-filter: blur(26px) saturate(185%);
+    border-radius: 26px;
+    box-shadow: var(--shadow), inset 0 1px 0 var(--edge), inset 0 -1px 0 var(--edge-2), inset 0 0 0 1px var(--edge-2);
+  }
+  /* brillo especular en el borde superior, como un vidrio curvo */
+  .glass::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .38), rgba(255, 255, 255, 0) 38%);
+    mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000); mask-composite: exclude;
+    -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000); -webkit-mask-composite: xor;
+    padding: 1px;
+  }
+
+  header.glass { position: fixed; top: max(14px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left));
+    padding: 14px 18px 14px 16px; display: flex; gap: 12px; align-items: center; max-width: calc(100% - 28px); }
+  header .logo { width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(145deg, #3aa0ff, #0a5fd8); box-shadow: inset 0 1px 0 rgba(255,255,255,.5); color: #fff; }
+  header h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+  header p { margin: 1px 0 0; font-size: 12.5px; color: var(--ink-2); }
+
+  aside#panel { position: fixed; right: max(14px, env(safe-area-inset-right)); top: max(14px, env(safe-area-inset-top));
+    width: 320px; padding: 16px 16px 12px; max-height: calc(100% - 120px); overflow: auto; scrollbar-width: none; }
+  aside#panel::-webkit-scrollbar { display: none; }
+  .title-row { display: flex; align-items: center; justify-content: space-between; margin: 2px 2px 10px; }
+  h2 { margin: 0; font-size: 13px; font-weight: 650; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+  .chip { font-size: 12px; color: var(--ink-2); }
+
+  .joint { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 6px 6px; border-radius: 14px; transition: background .2s; }
+  .joint:hover { background: rgba(255, 255, 255, .14); }
+  .joint label { font-size: 14px; font-weight: 560; }
+  .joint label small { color: var(--ink-2); font-weight: 450; margin-left: 4px; }
+  .joint output { font-variant-numeric: tabular-nums; font-size: 14px; color: var(--ink-2); min-width: 52px; text-align: right; }
+  input[type=range] { grid-column: 1 / -1; width: 100%; height: 26px; margin: 0; background: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 6px;
+    background: linear-gradient(90deg, var(--tint) var(--p, 50%), var(--track) var(--p, 50%)); }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 6px; background: var(--track); }
+  input[type=range]::-moz-range-progress { height: 6px; border-radius: 6px; background: var(--tint); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%;
+    background: rgba(255,255,255,.92); box-shadow: 0 2px 8px rgba(0,0,0,.22), inset 0 0 0 .5px rgba(0,0,0,.08); border: 0; }
+  input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.92);
+    box-shadow: 0 2px 8px rgba(0,0,0,.22); border: 0; }
+  input[type=range]:focus-visible { outline: none; }
+  input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(10,132,255,.35), 0 2px 8px rgba(0,0,0,.22); }
+
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); padding: 3px; gap: 2px; border-radius: 14px; background: var(--track); margin: 12px 0 10px; }
+  .seg button { border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; font-weight: 560; padding: 8px 4px;
+    border-radius: 11px; cursor: pointer; transition: background .2s, box-shadow .2s; }
+  .seg button[aria-pressed=true] { background: rgba(255,255,255,.85); color: #0e1726; box-shadow: 0 2px 6px rgba(0,0,0,.14); }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 8px 6px; font-size: 14px; }
+  .switch { position: relative; width: 51px; height: 31px; flex: none; }
+  .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch span { position: absolute; inset: 0; border-radius: 31px; background: var(--track); transition: background .25s; pointer-events: none; }
+  .switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.3,1.4,.6,1); }
+  .switch input:checked + span { background: #34c759; }
+  .switch input:checked + span::after { transform: translateX(20px); }
+  .switch input:focus-visible + span { box-shadow: 0 0 0 4px rgba(10,132,255,.35); }
+
+  nav#dock { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    display: flex; gap: 6px; padding: 7px; border-radius: 999px; }
+  nav#dock button, nav#dock a { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 11px 16px;
+    font: inherit; font-size: 14.5px; font-weight: 600; color: var(--ink); background: none; cursor: pointer; text-decoration: none; white-space: nowrap;
+    transition: background .2s, transform .15s; }
+  nav#dock button:hover, nav#dock a:hover { background: rgba(255,255,255,.22); }
+  nav#dock button:active { transform: scale(.96); }
+  nav#dock .primary { background: var(--tint); color: var(--tint-ink); box-shadow: 0 6px 18px rgba(10,132,255,.35), inset 0 1px 0 rgba(255,255,255,.35); }
+  nav#dock .primary:hover { background: var(--tint); filter: brightness(1.06); }
+  nav#dock button[hidden], nav#dock a[hidden] { display: none; }
+  nav#dock button:disabled { opacity: .45; cursor: default; }
+  svg.i { width: 18px; height: 18px; flex: none; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 124px); transform: translate(-50%, 8px);
+    padding: 10px 16px; border-radius: 16px; font-size: 13.5px; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; max-width: calc(100% - 32px); text-align: center; }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #loading { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; transition: opacity .5s; }
+  #loading .glass { padding: 14px 20px; font-size: 14px; }
+
+  /* ---------- Manual ---------- */
+  dialog#manual { border: 0; padding: 0; background: none; color: var(--ink); width: min(720px, calc(100% - 24px)); max-height: min(86vh, 900px); }
+  dialog#manual::backdrop { background: rgba(10, 18, 30, .25); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  dialog#manual .glass { padding: 26px 28px 22px; max-height: min(86vh, 900px); overflow: auto; }
+  dialog#manual h2 { font-size: 24px; text-transform: none; letter-spacing: -.01em; color: var(--ink); margin: 0 0 4px; }
+  dialog#manual h3 { font-size: 16px; margin: 22px 0 6px; }
+  dialog#manual p, dialog#manual li { color: var(--ink-2); font-size: 14.5px; }
+  dialog#manual ul, dialog#manual ol { padding-left: 20px; margin: 6px 0; }
+  dialog#manual table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 6px; }
+  dialog#manual td, dialog#manual th { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--track); }
+  dialog#manual th { color: var(--ink-2); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  kbd { font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 3px 6px; border-radius: 6px; background: var(--track); color: var(--ink); }
+  dialog#manual .close { position: sticky; top: 0; float: right; border: 0; width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+    background: var(--track); color: var(--ink); font-size: 18px; line-height: 34px; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--track); padding: 1px 5px; border-radius: 5px; }
+
+  @media (max-width: 760px) {
+    header.glass { right: 14px; }
+    aside#panel { top: auto; right: 10px; left: 10px; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 70px); width: auto; max-height: 40vh; padding: 12px; }
+    .joint { padding: 4px 6px; }
+    nav#dock { width: calc(100% - 20px); justify-content: space-between; }
+    nav#dock button, nav#dock a { padding: 10px 11px; font-size: 13px; }
+    nav#dock .lbl-long { display: none; }
+  }
+
+  /* ---------- RA de mesa ---------- */
+  .seg2 { display: inline-grid; grid-template-columns: 1fr 1fr; padding: 3px; gap: 2px; border-radius: 13px; background: var(--track); margin-left: 6px; }
+  .seg2 button { border: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+  .seg2 button[aria-pressed=true] { background: rgba(255,255,255,.88); color: #0e1726; box-shadow: 0 2px 6px rgba(0,0,0,.14); }
+  .hud { position: fixed; left: 50%; top: max(92px, calc(env(safe-area-inset-top) + 78px)); transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 11px 22px 12px; border-radius: 22px; text-align: center;
+    max-width: calc(100% - 32px); pointer-events: none; transition: box-shadow .3s; }
+  .hud b { font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  .hud span { font-size: 13px; color: var(--ink-2); }
+  .hud span:empty { display: none; }
+  .hud.found b::before { content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #ffd60a; margin-right: 8px;
+    vertical-align: 1px; box-shadow: 0 0 0 3px rgba(255,214,10,.3); animation: pulse 1.1s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(255,214,10,0); } }
+  #noAR { position: fixed; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 72px); transform: translateX(-50%);
+    font-size: 12.5px; color: var(--ink-2); padding: 7px 14px; border-radius: 14px; text-align: center; max-width: calc(100% - 32px); }
+  /* Overlay dentro de la sesión AR (DOM overlay en Android). Fuera de AR no se muestra. */
+  #arui { display: none; }
+  body.in-ar #arui { display: block; position: fixed; inset: 0; pointer-events: none; color: #fff; }
+  body.in-ar #arui .hud { top: max(18px, env(safe-area-inset-top)); color: #fff;
+    background: rgba(18,24,34,.62); -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 30px rgba(0,0,0,.25); }
+  body.in-ar #arui .hud span { color: rgba(255,255,255,.75); }
+  #arbar { position: absolute; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; padding: 7px;
+    border-radius: 999px; pointer-events: auto; background: rgba(18,24,34,.55); -webkit-backdrop-filter: blur(20px) saturate(170%); backdrop-filter: blur(20px) saturate(170%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 8px 30px rgba(0,0,0,.25); }
+  #arbar button { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; padding: 12px 16px; font: inherit; font-size: 15px; font-weight: 600;
+    color: #fff; background: rgba(255,255,255,.14); cursor: pointer; }
+  #arbar button[aria-pressed=true] { background: #ffd60a; color: #1b1500; }
+  #arbar #arExit { background: rgba(255,255,255,.92); color: #0e1726; }
+  body.in-ar header, body.in-ar nav#dock, body.in-ar #hud, body.in-ar #noAR, body.in-ar #toast { display: none; }
+  nav#dock button[aria-pressed=true] { background: rgba(255,214,10,.9); color: #1b1500; }
+  @media (max-width: 760px) {
+    header.glass { flex-wrap: wrap; }
+    .seg2 { margin-left: 0; }
+    .hud { top: max(150px, calc(env(safe-area-inset-top) + 136px)); }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c" aria-label="Vista 3D: mesa virtual para practicar la colocación"></canvas>
+
+<header class="glass">
+  <div class="logo" aria-hidden="true"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/></svg></div>
+  <div>
+    <h1>RA de mesa</h1>
+    <p id="modelSub">Globo logístico · Ø 45 cm</p>
+  </div>
+  <div class="seg2" id="seg" role="group" aria-label="Modelo">
+    <button data-k="atlas" aria-pressed="true">Atlas XR</button>
+    <button data-k="robot" aria-pressed="false">Brazo robótico</button>
+  </div>
+</header>
+
+<div class="hud glass" id="hud" role="status" aria-live="polite" hidden><b></b><span></span></div>
+
+<nav id="dock" class="glass" aria-label="Acciones">
+  <button id="btnAR" class="primary" hidden><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3.2"/></svg><span>Iniciar RA</span></button>
+  <a id="ql" class="primary" rel="ar" href="../atlas-xr/modelo/AtlasXR.usdz" hidden><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="1" height="1"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3.3 7.5 12 12l8.7-4.5M12 22V12"/></svg><span>Ver en tu espacio</span></a>
+  <button id="simReset"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Reubicar</span></button>
+  <button id="simAction" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/></svg><span>Girar</span></button>
+  <button id="btnManual"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/></svg><span>Manual</span></button>
+</nav>
+<div id="noAR" class="glass" hidden>Este navegador no tiene RA: practicá acá con la mesa virtual, o abrí la página en un Quest, un Android con Chrome o un iPhone.</div>
+<div id="toast" class="glass" role="status" aria-live="polite"></div>
+<div id="loading"><div class="glass">Cargando…</div></div>
+
+<!-- Interfaz dentro de la sesión AR (DOM overlay: Android/Chrome) -->
+<div id="arui">
+  <div class="hud" id="arHud" role="status" aria-live="polite"><b></b><span></span></div>
+  <div id="arbar">
+    <button id="arReset"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg><span>Reubicar</span></button>
+    <button id="arAction" aria-pressed="false"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/></svg><span>Girar</span></button>
+    <button id="arExit"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg><span>Salir</span></button>
+  </div>
+</div>
+
+<dialog id="manual" aria-labelledby="mTitle">
+  <div class="glass">
+    <button class="close" aria-label="Cerrar">×</button>
+    <h2 id="mTitle">Manual · RA de mesa</h2>
+    <p>Un mismo sistema de colocación para el <b>brazo robótico de 6 ejes</b> y el <b>globo logístico Atlas XR</b>, con la mecánica de la app Medición del iPhone: buscás una superficie, la retícula se apoya sobre ella y con un toque el objeto queda anclado.</p>
+    <h3>Pasos</h3>
+    <ol>
+      <li><b>Buscá una superficie plana.</b> Mové el dispositivo despacio sobre una mesa o el piso. Mientras busca, la retícula flota frente a vos.</li>
+      <li><b>Esperá la retícula amarilla.</b> Cuando encuentra un plano horizontal se apoya sobre él, aparece el punto amarillo con pulso y la huella punteada del objeto a escala real.</li>
+      <li><b>Tocá para colocar.</b> El objeto queda en un ancla espacial: podés caminar alrededor y verlo desde cualquier ángulo.</li>
+      <li><b>Interactuá.</b> Atlas XR: tocá un nodo para abrir su tarjeta de datos y arrastrá el globo para girarlo. Brazo: tocá una articulación para ver qué eje es; «Animar» lo pone a trabajar.</li>
+    </ol>
+    <h3>Cada dispositivo</h3>
+    <table>
+      <tr><th>Dispositivo</th><th>Cómo entrar</th><th>Colocar / tocar</th></tr>
+      <tr><td>Meta Quest 3 / 3S</td><td>Navegador del Quest → <b>Iniciar RA</b> (passthrough)</td><td>Gatillo o pellizco. <kbd>A</kbd> reubica, <kbd>B</kbd> anima o gira, el stick rota el objeto</td></tr>
+      <tr><td>Android</td><td>Chrome con ARCore → <b>Iniciar RA</b></td><td>Toque en pantalla</td></tr>
+      <tr><td>iPhone / iPad</td><td>Safari → <b>Ver en tu espacio</b> (AR Quick Look)</td><td>Quick Look detecta el plano y coloca el modelo; arrastrá para moverlo y pellizcá para escalar</td></tr>
+      <tr><td>Computadora</td><td>Esta página (simulador)</td><td>Pasá el puntero por la mesa y hacé clic; arrastrá para girar la vista</td></tr>
+    </table>
+    <h3>Qué hace el sistema</h3>
+    <ul>
+      <li><b>Detección de planos y hit-test:</b> un rayo continuo desde el centro de la vista (teléfono) o desde el control/la mano (Quest). Solo acepta superficies horizontales (±22°).</li>
+      <li><b>Ancla espacial:</b> el origen (0, 0, 0) del modelo, en el centro inferior de la base, se fija a la superficie. Si el sistema corrige su mapa, el ancla se mueve con él.</li>
+      <li><b>Seguimiento 6DoF:</b> el objeto queda quieto en el mundo mientras caminás alrededor, con paralaje real.</li>
+      <li><b>Estimación de luz:</b> en Android, la luz ambiente y la dirección principal se aplican al modelo y orientan la sombra suave sobre la mesa. En Quest, que no la expone, se usa una luz fija.</li>
+    </ul>
+    <h3>Archivos</h3>
+    <ul>
+      <li><code>slam-colocacion.js</code>: retícula, planos, hit-test, anclas y estados; reutilizable en otros proyectos.</li>
+      <li><code>../atlas-xr/</code> y <code>../robot-6-ejes/</code>: modelos <code>.glb</code> / <code>.gltf</code> / <code>.usdz</code> y los scripts de Blender que los generan.</li>
+      <li><code>ESPECIFICACION.md</code>: especificación técnica completa y pseudocódigo nativo para ARKit, ARCore y Quest.</li>
+    </ul>
+  </div>
+</dialog>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

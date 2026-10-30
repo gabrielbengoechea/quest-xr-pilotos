@@ -250,7 +250,7 @@
       <li><code>modelo/Robot6Ejes.glb</code>: texturas PNG, para Android (Scene Viewer) y cualquier visor glTF.</li>
       <li><code>modelo/Robot6Ejes_motor.glb</code>: incluye colisiones <code>UCX_*</code> para Unity, Unreal o Godot.</li>
       <li><code>modelo/Robot6Ejes.usdz</code>: iPhone y iPad (Quick Look). <code>fuente/</code>: archivo de Blender y el script que lo genera.</li>
-      <li>Jerarquía: <code>Base_Mesh › Shoulder_Joint › Upper_Arm › Elbow_Joint › Wrist_1_Joint › Wrist_2_Joint › Wrist_3_Flange</code>.
+      <li>Jerarquía: <code>Base_Mesh › Shoulder_Joint › Upper_Arm › Elbow_Joint › Wrist_1 › Wrist_2 › Wrist_3</code>.
         En glTF cada articulación gira sobre su <b>eje Y local</b> (el Z local de Blender). Origen: centro de la base, apoyado en y = 0.</li>
       <li>Unidades en metros, un solo material con atlas PBR de 2048 px, 8.122 triángulos.</li>
     </ul>
@@ -273,9 +273,9 @@ const JOINTS = [
   { node: 'Shoulder_Joint', key: 'J1', name: 'Base', min: -180, max: 180 },
   { node: 'Upper_Arm', key: 'J2', name: 'Hombro', min: -150, max: 150 },
   { node: 'Elbow_Joint', key: 'J3', name: 'Codo', min: -160, max: 160 },
-  { node: 'Wrist_1_Joint', key: 'J4', name: 'Muñeca 1', min: -180, max: 180 },
-  { node: 'Wrist_2_Joint', key: 'J5', name: 'Muñeca 2', min: -180, max: 180 },
-  { node: 'Wrist_3_Flange', key: 'J6', name: 'Brida', min: -180, max: 180 },
+  { node: 'Wrist_1', key: 'J4', name: 'Muñeca 1', min: -180, max: 180 },
+  { node: 'Wrist_2', key: 'J5', name: 'Muñeca 2', min: -180, max: 180 },
+  { node: 'Wrist_3', key: 'J6', name: 'Brida', min: -180, max: 180 },
 ];
 // Poses en grados (J1…J6). «Erguido» es la pose en que se modeló el robot.
 const POSES = {
@@ -414,7 +414,7 @@ new GLTFLoader().load(MODELO, (gltf) => {
     obj.add(h);
     axisHelpers.push(h);
   }
-  flange = robot.getObjectByName('Wrist_3_Flange');
+  flange = robot.getObjectByName('Wrist_3');
   document.getElementById('tris').textContent = `${Math.round(tris).toLocaleString('es-UY')} triángulos`;
   applyPose('erguido', 0);
   document.getElementById('loading').style.opacity = 0;

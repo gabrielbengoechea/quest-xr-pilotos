@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Robot de 6 ejes · UTEC ITR Norte</title>
 <meta name="description" content="Brazo robótico industrial de 6 ejes en 3D, VR y realidad mixta para Meta Quest, Android e iPhone.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icono-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Robot 6 ejes">
+<meta name="theme-color" content="#0b1018">
 <style>
   :root {
     color-scheme: light dark;
@@ -898,6 +905,23 @@ addEventListener('resize', () => {
   frameView();
 });
 if (new URLSearchParams(location.search).has('debug')) Object.assign(window, { __robot: { joints, setJoint, applyPose, startDemo, scene, camera, anchor, xrPanel, drawPanel, box } });
+</script>
+<script>
+  (() => {
+    const ios = /iPhone|iPod/.test(navigator.userAgent);
+    const app = navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+    let visto = false; try { visto = localStorage.getItem('aviso-pantalla-completa') === '1'; } catch {}
+    if (!ios || app || visto) return;
+    addEventListener('load', () => {
+      const d = document.createElement('div');
+      d.className = 'glass'; d.setAttribute('role', 'note');
+      d.style.cssText = 'position:fixed;left:12px;right:12px;top:max(12px,env(safe-area-inset-top));z-index:50;padding:12px 44px 12px 16px;font-size:14px;line-height:1.4';
+      d.innerHTML = '<b>Pantalla completa:</b> tocá <b>Compartir</b> <span aria-hidden="true">⬆︎</span> → <b>Agregar a inicio</b> y abrila desde el ícono, sin barras del navegador.' +
+        '<button aria-label="Cerrar" style="position:absolute;right:8px;top:8px;width:30px;height:30px;border:0;border-radius:50%;background:rgba(0,0,0,.08);font-size:16px;color:inherit">×</button>';
+      d.querySelector('button').onclick = () => { d.remove(); try { localStorage.setItem('aviso-pantalla-completa', '1'); } catch {} };
+      document.body.append(d);
+    });
+  })();
 </script>
 </body>
 </html>

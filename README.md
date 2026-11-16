@@ -1,39 +1,50 @@
-# Pilotos XR para Meta Quest
+# Quest XR Pilots
 
-Aplicaciones WebXR (three.js r186) pensadas para Meta Quest 2 y preparadas para Quest 3.
-No requieren instalación: se abren desde el navegador del visor.
+> Browser-based WebXR pilots for Meta Quest — logistics, industry and engineering experiences that open straight from the headset browser, with no installation.
 
-| App | Archivo | Qué hace |
+**[▶ Open the portal](https://gabrielbengoechea.github.io/quest-xr-pilotos/)** · Interfaces in Spanish · [Leer en español](README.es.md)
+
+Built with three.js (r186) and WebXR, designed for Meta Quest 2 and prepared for Quest 3. Several pilots also run on Android and iPhone.
+
+## Pilots
+
+| App | Path | What it does |
 |---|---|---|
-| Atlas Portuario XR | `atlas.html` | Globo en realidad mixta con 30 puertos (5 por región), 8 pasos estratégicos, 12 corredores y vistas 360° de Wikimedia Commons |
-| Motor turbofán | `motor-jet/index.html` | Vista explosionada de un motor de reacción en 5 niveles, colocada sobre la mesa |
-| Autoelevador VR | `autoelevador/index.html` | Entrenamiento de conducción de un autoelevador en un depósito uruguayo: 6 tareas, volante, palancas, espejos y pallets. Modelos en glTF, FBX y Blender en `autoelevador/modelo` y `autoelevador/fuente` |
-| Robot de 6 ejes | `robot-6-ejes/index.html` | Brazo industrial a escala real con placa UTEC ITR Norte: articulaciones, poses, demostración y colocación en la mesa (VR, realidad mixta, Android e iPhone). Modelo en glTF, USDZ y Blender en `robot-6-ejes/modelo` y `robot-6-ejes/fuente` |
-| RA de mesa | `ar-mesa/index.html` | Colocación SLAM estilo Medición (retícula, hit-test, ancla, luz estimada y sombras) para el brazo robótico y Atlas XR: Quest passthrough, Android (ARCore), iPhone (Quick Look) y simulador. Especificación y pseudocódigo nativo en `ar-mesa/ESPECIFICACION.md` |
-| Atlas XR (modelo) | `atlas-xr/` | Globo logístico de mesa Ø 45 cm, 9.760 triángulos, 39 nodos con datos y 12 rutas emisivas; glTF, USDZ y Blender, con el script que lo genera |
-| Centro Logístico 3D | [fork de logi](https://github.com/gabrielbengoechea/logi) | Recorrido a pie en VR por una nave de distribución |
-| Logística 3D | [fork de logistica3d](https://github.com/gabrielbengoechea/logistica3d) | Recorrido a pie en VR por la terminal de Montevideo |
-| Estiba | [fork de Estiba-VR](https://github.com/gabrielbengoechea/Estiba-VR) | Exploración libre en VR de una terminal de contenedores |
+| **Port Atlas XR** | [`atlas.html`](atlas.html) | Mixed-reality globe with 30 ports (5 per region), 8 strategic chokepoints, 12 shipping corridors and 360° views from Wikimedia Commons |
+| **Turbofan engine** | [`motor-jet/`](motor-jet/index.html) | Exploded view of a jet engine in 5 levels, placed on a real table |
+| **Forklift VR** | [`autoelevador/`](autoelevador/index.html) | Forklift driving training in a Uruguayan warehouse: 6 tasks, steering wheel, levers, mirrors and pallets ([manual](autoelevador/MANUAL.md)) |
+| **6-axis robot** | [`robot-6-ejes/`](robot-6-ejes/index.html) | Full-scale industrial arm with joints, poses, demo mode and tabletop placement (VR, mixed reality, Android and iPhone Quick Look) ([manual](robot-6-ejes/MANUAL.md)) |
+| **Tabletop AR** | [`ar-mesa/`](ar-mesa/index.html) | SLAM-style placement (reticle, hit-test, anchor, light estimation, shadows) for the robot and Atlas XR on Quest passthrough, Android (ARCore) and iPhone ([spec](ar-mesa/ESPECIFICACION.md)) |
+| **Atlas XR model** | [`atlas-xr/`](atlas-xr/) | 45 cm tabletop logistics globe: 9,760 triangles, 39 data nodes, 12 emissive routes; glTF, USDZ and Blender sources with the generator script |
 
-## Cómo usarlas en el Quest
+The portal also links to VR walkthroughs I added to forks of simulators by [@sr-sebastian](https://github.com/sr-sebastian): [Centro Logístico 3D](https://github.com/gabrielbengoechea/logi), [Logística 3D](https://github.com/gabrielbengoechea/logistica3d) and [Estiba](https://github.com/gabrielbengoechea/Estiba-VR).
 
-1. Activar **GitHub Pages** en este repositorio (Settings › Pages › rama `main`, carpeta `/`).
-2. En el visor, marcar la mesa en *Ajustes › Entorno físico › Configuración del espacio*.
-3. Abrir `https://<usuario>.github.io/quest-xr-pilotos/` en el navegador del Quest y elegir la app.
-4. Aceptar el permiso de acceso al espacio al entrar en realidad mixta.
+## Using them on a Quest
 
-WebXR exige HTTPS; GitHub Pages ya lo provee.
+1. Open <https://gabrielbengoechea.github.io/quest-xr-pilotos/> in the Quest browser and choose an app.
+2. For mixed reality, set up your table in *Settings › Physical space › Space setup* and accept the space permission.
 
-## Controles comunes
+WebXR requires HTTPS, which GitHub Pages provides.
 
-- **Gatillo:** colocar en la mesa / seleccionar
-- **Grip:** tomar y mover el modelo
-- **Thumbstick:** girar y ajustar (despiece o tamaño según la app)
-- **B/Y:** volver a colocar
+### Common controls
 
-## Datos del Atlas
+| Action | Input |
+|---|---|
+| Place on table / select | Trigger |
+| Grab and move the model | Grip |
+| Rotate / adjust (explode level or size) | Thumbstick |
+| Re-place | B / Y |
 
-TEU de 2024–2025 o año fiscal según la región (indicado en cada ficha); estado de los pasos estratégicos a octubre de 2026.
-Fuentes: DynaLiners (vía Container News), estudio de R. J. Sánchez publicado por MundoMarítimo, autoridades portuarias,
-Lloyd's List One Hundred Ports 2025, EIA (World Oil Transit Chokepoints), BIMCO/Clarksons, Autoridad del Canal de Panamá,
-IMF PortWatch. Las imágenes 360° se consultan en vivo en Wikimedia Commons y muestran autor y licencia.
+## Technology
+
+three.js r186 · WebXR (VR, mixed reality, hit-test, anchors) · glTF / USDZ · Blender (models and generator scripts) · static hosting on GitHub Pages.
+
+## Data sources (Port Atlas)
+
+TEU figures for 2024–2025 or fiscal year depending on the region (stated on each card); chokepoint status as of October 2026. Sources: DynaLiners (via Container News), R. J. Sánchez study published by MundoMarítimo, port authorities, Lloyd's List One Hundred Ports 2025, EIA World Oil Transit Chokepoints, BIMCO/Clarksons, Panama Canal Authority, IMF PortWatch. 360° images are loaded live from Wikimedia Commons with author and license shown.
+
+## Credits & license
+
+- Author: [Gabriel Bengoechea](https://github.com/gabrielbengoechea) — Logistics Engineering, UTEC Uruguay (robot and tabletop AR pilots carry the UTEC ITR Norte plate).
+- Developed with AI-assisted coding (Anthropic's Claude), as recorded in the commit history.
+- No license has been chosen yet. Third-party images keep their original licenses.
